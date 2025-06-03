@@ -14,23 +14,8 @@
   width: 100%;
   height: auto;
   display: flex;
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* Loading Spinner */
@@ -38,7 +23,7 @@
   width: 100%;
   height: 60vh;
   display: flex;
-  justify-content: center;
+
   text-align: center;
   align-items: center;
 }
@@ -70,7 +55,7 @@
 
 /* General Container */
 .attendance-container {
-  background: #f0f0f063;
+  background: white;
   padding: 30px;
   padding-top: 20px;
 }
@@ -306,11 +291,11 @@ select {
 /* Review Cards */
 .home-container {
   padding: 20px;
-  background-color: #f9f9f9;
+  background-color: white;
   max-width: 700px;
   margin: 0 auto;
   border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
 }
 
 .home-title {
@@ -415,7 +400,7 @@ select {
 
 /* Batch Details Section */
 .batch-details-container {
-  padding: 20px;
+  padding: 0px;
   background-color: white;
   max-width: 100%;
   margin: 0 auto;
@@ -423,6 +408,7 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: -10px;
 }
 
 .batch-title {
@@ -511,10 +497,10 @@ select {
 /* bill */
 
 .bill-container {
-  background-color: #f4f7fc;
+  background-color: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
   margin: 20px;
   max-width: 800px;
   margin: 0 auto;
@@ -533,7 +519,7 @@ select {
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 15px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .bill-card .bill-header {
@@ -615,7 +601,7 @@ select {
 }
 
 .payment-bill {
-  width: 96%;
+  width: 90%;
   background-color: #f9f9f9;
   margin-bottom: 15px;
   padding: 15px;
@@ -657,7 +643,7 @@ select {
 .emi-progress {
   display: flex;
   align-items: center;
-  width: 85%;
+  width: 95%;
   height: 60px;
   position: relative;
   justify-content: center;
@@ -672,7 +658,7 @@ select {
   position: absolute;
   top: 20%;
   z-index: 0;
-  left: 10%;
+  left: 1%;
   border-radius: 20px;
   box-shadow: 5px 5px 5px #71a7e177;
 }
@@ -798,14 +784,14 @@ select {
 }
 
 .announcement_title {
-  font-size: 1.2rem;
+  font-size: .9rem;
   font-weight: bold;
   color: #333;
   margin: 0;
 }
 
 .announcement_text {
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   color: #666;
   margin-top: 5px;
 }
@@ -855,14 +841,15 @@ select {
 }
 
 .topsection_card_userhomepage {
-  padding: 10px;
+
+  padding: 10px 5px 5px 5px;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: 15px;
   color: rgb(38, 38, 38);
   text-decoration: none;
   background-color: white;
   transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .topsection_card_userhomepage:hover {
@@ -881,10 +868,10 @@ select {
   border-radius: 10px;
 }
 
-.topsection_card_userhomepage_button {
+.topsection_card_userhomepage_buttons {
   padding: 5px;
   width: 90%;
-  font-size: 0.9rem;
+  font-size: 0.5rem;
   color: white;
   border: none;
   border-radius: 5px;
@@ -898,36 +885,18 @@ select {
 }
 
 .topsection_card_userhomepage h3 {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
 .sidebar_bottom_text {
   margin-top: 3px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: black;
   text-align: center;
 }
 
-/* Second Section Main */
-.second_section_main {
-  width: 80%;
-  height: auto;
-  margin: 5px;
-  padding-top: 70px;
-  padding-left: 20%;
-}
-
-/* Third Section Main Div */
-.third_section_main {
-  padding-top: 80px;
-  width: 20%;
-  background-color: var(--background-light);
-  display: flex;
-  justify-content: center;
-  align-items: start;
-}
 
 /* resoponsive down navbar  */
 
@@ -1020,6 +989,7 @@ select {
   padding: 15px;
   /* Required for tooltip positioning */
 }
+
 /* Tooltip Styling */
 .res_down_menus-more {
   display: none;
@@ -1036,12 +1006,65 @@ select {
   z-index: 1001;
   transition: opacity 0.3s ease;
 }
+
 .topsection_card_userhomepage_down-more:hover .res_down_menus-more {
   display: block;
   /* Show tooltip on hover */
   opacity: 1;
-  
+
 }
+
+
+
+
+
+
+
+.main-sec-second-third{
+  width: 100%;
+ 
+}
+.main-sec-second-and-third{
+  width: 100%;
+  display: flex;
+}
+/* Second Section Main */
+.second_section_main {
+  width: 80%;
+  height: auto;
+  margin: 5px;
+  padding-left: 20%;
+}
+
+/* Third Section Main Div */
+.third_section_main {
+  margin-top: -250px;
+  width: 19%;
+  background-color: var(--background-light);
+  display: flex;
+  justify-content: center;
+  align-items: start;
+}
+
+.poster-ad-section {
+  width: 76%;
+  height: 270px;
+  margin-top: 62px;
+  margin-left: 12%;
+  padding: 10px;
+  background-color: transparent;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+
+
+
+
+
 
 
 /* Responsive Styles */
@@ -1077,7 +1100,7 @@ select {
   }
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 700px) {
   .main_home {
     width: 100%;
   }
@@ -1088,10 +1111,9 @@ select {
 
   .second_section_main {
     padding-top: 17%;
-    width: 100%;
+    width: 99%;
     padding-left: 0;
     margin: 0;
-
     background-color: white;
   }
 
@@ -1125,7 +1147,7 @@ select {
   }
 
   .batch-card {
-    width: 96%;
+    width: 95%;
 
   }
 
@@ -1164,6 +1186,9 @@ select {
     top: -27px;
 
   }
+  .inner_box{
+    width: 97%;
+  }
 
 
 }
@@ -1200,7 +1225,7 @@ select {
 
 .announcement-container {
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: white;
 }
 
 .announcement-grid {
@@ -1494,7 +1519,6 @@ select {
 
 .task-container {
   padding: 16px;
-  background-color: #f9f9f9;
 }
 
 .task-title {
@@ -1846,5 +1870,24 @@ select {
   .qr-code {
     width: 200px;
     height: 270px;
+  }
+}
+
+
+@media screen and (max-width: 768px) {
+  .poster-ad-section {
+    width: 100%;
+    margin-left: 0;
+    height: 150px;
+    margin-top: 75px; /* Keep some margin at the top */
+    margin-bottom: 15px;
+  }
+
+  .home-poster-container {
+    height: 150px;
+  }
+
+  .second_section_main {
+    padding-top: 0px;
   }
 }
