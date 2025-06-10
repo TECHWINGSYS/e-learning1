@@ -10,7 +10,7 @@ const getTokenFromLocalStorage = () => {
 };
 
 // Base URL for both instances
-const SampleUrl = 'hhttps://e-learning-clj3.onrender.com';
+const SampleUrl = 'https://e-learning-clj3.onrender.com';
 
 export const basicRequest = axios.create({
   baseURL: SampleUrl
