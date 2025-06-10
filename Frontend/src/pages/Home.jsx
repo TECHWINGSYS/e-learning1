@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { TokenRequest } from '../AxiosCreate';
 import { useSelector } from 'react-redux';
@@ -31,42 +32,74 @@ import Add from '../components/Add';
 import DueDateAlert from '../components/PaymentAlert';
 import { PiExamFill } from "react-icons/pi";
 import HomePoster from '../components/HomePoster';
+import TaskReply from '../components/TaskReply'
+import he from 'he';
+import { cleanHtml, getShortHtml, getShortHtmlLength } from '../components/cleanText';
+import ViewAnnou from '../components/ViewAnnou';
+import ViewAnnouper from '../components/ViewAnnouper';
+import { IoIosMailUnread } from "react-icons/io";
+import { IoMail } from "react-icons/io5";
+import { FaBell } from "react-icons/fa";
+import { LuBellDot } from "react-icons/lu";
 
 
-
+/**
+ * Main Home component that serves as the dashboard for students
+ * Displays various sections like attendance, tasks, projects, announcements, etc.
+ */
 function Home() {
-  const [student_id, setStudent_id] = useState('');
-  const [reviews, setReviews] = useState([]);
-  const [batch, setBatch] = useState([]);
-  const [attendance, setAttendance] = useState([]);
-  const [filteredAttendance, setFilteredAttendance] = useState([]);
-  const [bill, setBill] = useState([]);
-  const [activeSection, setActiveSection] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [paymentData, setPaymentData] = useState([])
-  const [batchname, setBatchname] = useState('')
-  const navigate = useNavigate()
-  const [material, setMaterial] = useState([])
-  const [homeAnnouncement, setHomeAnnouncement] = useState([])
-  const [announcement, setAnnouncement] = useState([])
-  const [activeMenu, setActiveMenu] = useState("");
-  const [nodata, setNodata] = useState(false)
-  const [personalAnn, setPersonalAnn] = useState([])
-  const [student, setSutdent] = useState([])
-  const [task, setTask] = useState([])
-  const [project, setProject] = useState([])
-  var [dueDate, setDueDate] = useState(null)
-  const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]);
-  var [addTime, setAddTime] = useState(false)
-  const [showMore, setShowMore] = useState(false);
+  // State declarations
+  const [training_id, setTraining_id] = useState(''); // Stores student ID
+  const [reviews, setReviews] = useState([]); // Stores student reviews/results
+  const [batch, setBatch] = useState([]); // Stores batch details
+  const [attendance, setAttendance] = useState([]); // Stores attendance records
+  const [filteredAttendance, setFilteredAttendance] = useState([]); // Stores filtered attendance records
+  const [bill, setBill] = useState([]); // Stores billing information
+  const [activeSection, setActiveSection] = useState('dashboard'); // Tracks currently active section
+  const [loading, setLoading] = useState(false); // Loading state
+  const [selectedYear, setSelectedYear] = useState(''); // Selected year for attendance filter
+  const [selectedMonth, setSelectedMonth] = useState(''); // Selected month for attendance filter
+  const [paymentData, setPaymentData] = useState([]) // Stores payment data
+  const [batchname, setBatchname] = useState('') // Stores batch name
+  const navigate = useNavigate() // Navigation hook
+  const [material, setMaterial] = useState([]) // Stores study materials
+  const [homeAnnouncement, setHomeAnnouncement] = useState([]) // Stores home announcements
+  const [announcement, setAnnouncement] = useState([]) // Stores all announcements
+  const [activeMenu, setActiveMenu] = useState(""); // Tracks active menu item
+  const [nodata, setNodata] = useState(false) // Flag for no data available
+  const [personalAnn, setPersonalAnn] = useState([]) // Stores personal announcements
+  const [student, setSutdent] = useState([]) // Stores student details
+  const [task, setTask] = useState([]) // Stores tasks
+  const [project, setProject] = useState([]) // Stores projects
+  var [dueDate, setDueDate] = useState(null) // Stores payment due date
+  const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]); // Gets login info from Redux
+  var [addTime, setAddTime] = useState(false) // Controls ad display
+  const [showMore, setShowMore] = useState(false); // Controls 'More' dropdown
+  var [taskForm, setTaskForm] = useState(false) // Controls task form display
+  const [viewMore, setViewMore] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedType, setSelectedType] = useState('batch');   // Toggle between 'batch' or 'personal'
 
+
+  const handleViewMore = (item) => {
+    setSelectedItem(item);
+  };
+
+  const closeViewMore = () => {
+    setSelectedItem(null);
+  };
+
+
+  /**
+   * Toggles the 'More' dropdown menu
+   */
   const toggleMore = () => {
     setShowMore(prev => !prev);
   };
 
-
+  /**
+   * Shows advertisement after a delay
+   */
   function showAd() {
     setTimeout(() => {
       setAddTime(true)
@@ -75,6 +108,10 @@ function Home() {
 
   const dispatch = useDispatch()
 
+  /**
+   * Handles user logout
+   * Dispatches logout action and reloads the page
+   */
   async function logout() {
     dispatch(LogoutData())
     await setTimeout(() => {
@@ -82,40 +119,43 @@ function Home() {
     }, 0);
   }
 
+  // Effect to set student ID and show ad when login info changes
   useEffect(() => {
     setLoading(true);
     showAd()
     if (logininfom) {
-
-      setStudent_id(logininfom.student_id);
-
+      setTraining_id(logininfom.training_id);
     }
   }, [logininfom]);
 
-  useEffect(() => {
-    if (student_id && activeSection === 'dashboard') {
 
+  // Effect to fetch bill and student data when training_id or active section changes
+  useEffect(() => {
+    if (training_id && activeSection === 'dashboard') {
       async function billhome() {
         await fetchData('batchDetails');
-        let response = await TokenRequest.get(`/student/getdatabill?student_id=${student_id}`);
-        let response2 = await TokenRequest.get(`/student/getstudent?student_id=${student_id}`);
+        let response = await TokenRequest.get(`/student/getdatabill?training_id=${training_id}`);
+        let response2 = await TokenRequest.get(`/student/getstudent?student_id=${logininfom.student_id}`);
         setDueDate(response.data[response.data.length - 1].due_date ? response.data[response.data.length - 1].due_date : null)
         const lastPayment = response.data[response.data.length - 1];
         setPaymentData(lastPayment);
         setSutdent(response2.data[0].name)
       }
-
       billhome();
     }
-  }, [student_id, activeSection]);
+  }, [training_id, activeSection]);
 
+  // Current date formatted as YYYY-MM-DD
   const date = new Date();
   const formattedDate = date.toISOString().split('T')[0];
 
-
+  /**
+   * Fetches data for different sections based on the selected menu item
+   * @param {string} section - The section to fetch data for
+   */
   const fetchData = async (section) => {
     setActiveMenu(section);
-    if (!student_id) return;
+    if (!training_id) return;
     setLoading(true);
 
     try {
@@ -123,13 +163,13 @@ function Home() {
       switch (section) {
         case 'batchDetails':
           setActiveSection('batchDetails');
-          response = await TokenRequest.get(`/student/getdatatraining?student_id=${student_id}`);
+          response = await TokenRequest.get(`/student/getdatatraining?training_id=${training_id}`);
           setBatch(response.data);
 
           const batchName = response.data[0]?.batch || 'No Batch Assigned';
           setBatchname(batchName);
           var statuscheck = response.data[0].status
-          // if status is droped the user will logout automaticaly
+          // Automatically logout if student is marked as DROPPED
           if (statuscheck == 'DROPED') {
             toast.error("Student Droped course!");
             dispatch(LogoutData())
@@ -139,32 +179,54 @@ function Home() {
           }
 
           if (batchName) {
+
             try {
               const announcementResponse = await TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchName}`);
-              console.log(announcementResponse);
+              const responseano = await TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`);
 
-              if (announcementResponse.data.length > 0) {
-                setHomeAnnouncement(announcementResponse.data[announcementResponse.data.length - 1]);
-              } else {
-                setHomeAnnouncement({ message: "No announcements available." });
+              console.log("announcementResponse:", announcementResponse);
+              console.log("responseano:", responseano);
+
+              // Get last 3 items (if available) from each
+              const annList = announcementResponse.data.slice(-4).reverse(); // reverse for latest-first order
+              const anoList = responseano.data.slice(-4).reverse();
+
+              // Merge alternatively
+              const mergedAnnouncements = [];
+              for (let i = 0; i < 6; i++) {
+                if (annList[i]) mergedAnnouncements.push(annList[i]);
+                if (anoList[i]) mergedAnnouncements.push(anoList[i]);
+                if (mergedAnnouncements.length >= 6) break;
               }
+
+              // Fill with placeholders if less than 3
+              while (mergedAnnouncements.length < 5) {
+                mergedAnnouncements.push({ message: "No announcement available." });
+              }
+
+              setHomeAnnouncement(mergedAnnouncements);
+
             } catch (error) {
               console.warn("Error fetching announcements:", error);
-              setHomeAnnouncement({ message: "Unable to fetch announcements." });
+              setHomeAnnouncement([
+                { message: "Unable to fetch announcements." },
+                { message: "Unable to fetch second announcement." },
+                { message: "Error occurred." }
+              ]);
             }
-          } else {
-            setHomeAnnouncement({ message: "No batch name found." });
+
+
           }
           break;
 
+
         case 'reviews':
           setActiveSection('reviews');
-          response = await TokenRequest.get(`/student/getdatareview?student_id=${student_id}`);
+          response = await TokenRequest.get(`/student/getdatareview?training_id=${training_id}`);
           if (response.data.length === 0) {
             setReviews([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
             setReviews(response.data);
           }
@@ -172,13 +234,12 @@ function Home() {
 
         case 'attendance':
           setActiveSection('attendance');
-          response = await TokenRequest.get(`/student/getdataattendance?student_id=${student_id}&year=${selectedYear}&month=${selectedMonth}`);
+          response = await TokenRequest.get(`/student/getdataattendance?training_id=${training_id}&year=${selectedYear}&month=${selectedMonth}`);
           if (response.data.length === 0) {
             setAttendance([]);
             setFilteredAttendance([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
             setAttendance(response.data);
             setFilteredAttendance(response.data);
@@ -187,12 +248,11 @@ function Home() {
 
         case 'bill':
           setActiveSection('bill');
-          response = await TokenRequest.get(`/student/getdatabill?student_id=${student_id}`);
+          response = await TokenRequest.get(`/student/getdatabill?training_id=${training_id}`);
           if (response.data.length === 0) {
             setBill([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
             setBill(response.data);
           }
@@ -205,7 +265,6 @@ function Home() {
             setMaterial([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
             setMaterial(response.data);
           }
@@ -213,69 +272,85 @@ function Home() {
 
         case 'announcement':
           setActiveSection('announcement');
-          response = await TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`);
+          setLoading(true);
+          setNodata(false);
 
-          if (response.data.length === 0) {
+          try {
+            const response = await TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`);
+            console.log("from batch-annoce",response.data);
+            
+
+            if (response.data.length === 0) {
+              setAnnouncement([]);
+              setActiveSection('');
+              setNodata(true);
+            } else {
+              setAnnouncement(response.data);
+            }
+
+            const response5 = await TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`);
+            if (response5.data.length === 0) {
+              setPersonalAnn([]);
+            } else {
+              setPersonalAnn(response5.data);
+            }
+
+          } catch (error) {
+            console.error("Error fetching announcements:", error);
+            setNodata(true);
             setAnnouncement([]);
-            setActiveSection(' ');
-            setNodata(true)
-
-          } else {
-            setAnnouncement(response.data);
+            setPersonalAnn([]);
+          } finally {
+            setLoading(false);
           }
-
+          setActiveSection('announcement');
           break;
+
 
         case 'Project':
           setActiveSection('Project');
-
-          response = await TokenRequest.get(`/student/getProjects?student_id=${student_id}`);
+          response = await TokenRequest.get(`/student/getProjects?training_id=${training_id}`);
 
           if (response.data.length === 0) {
             setActiveSection(' ');
             setNodata(true)
           } else {
             setProject(response.data)
-
           }
           break;
+
         case 'personalannouncement':
           setActiveSection('personalannouncement');
-          response = await TokenRequest.get(`/student/getdataAnnouncementsid?student_id=${student_id}`);
-
-          if (response.data.length === 0) {
+          var response5 = await TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`);
+          if (response5.data.length === 0) {
             setPersonalAnn([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
-            setPersonalAnn(response.data);
-
+            setPersonalAnn(response5.data);
+            console.log(response5.data);
           }
           break;
+
         case 'task':
           setActiveSection('task');
-          response = await TokenRequest.get(`/student/getTasks?student_id=${student_id}`);
-
+          response = await TokenRequest.get(`/student/getTasks?training_id=${training_id}`);
           if (response.data.length === 0) {
             setTask([]);
             setActiveSection(' ');
             setNodata(true)
-
           } else {
             setTask(response.data);
           }
           break;
+
         case 'tests':
           setActiveSection('tests');
-
           break;
 
         default:
           break;
       }
-
-
     } catch (err) {
       console.error(`Error fetching ${section} data:`, err);
     } finally {
@@ -284,6 +359,10 @@ function Home() {
   };
 
 
+  /**
+   * Filters attendance records by status
+   * @param {string} status - The attendance status to filter by ('all', 'Present', 'Absent')
+   */
   const handleAttendanceFilter = (status) => {
     if (status === 'all') {
       setFilteredAttendance(attendance);
@@ -293,14 +372,27 @@ function Home() {
     }
   };
 
+  /**
+   * Handles year selection change for attendance filter
+   * @param {Object} e - The event object
+   */
   const handleYearChange = (e) => {
     setSelectedYear(e.target.value);
   };
 
+  /**
+   * Handles month selection change for attendance filter
+   * @param {Object} e - The event object
+   */
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
   };
 
+  /**
+   * Determines pass/fail status based on marks
+   * @param {Object} marks - Object containing marks data
+   * @returns {string} - 'pass' or 'fail'
+   */
   const getPassFailStatus = (marks) => {
     const aptitude = parseInt(marks.aptitude) || 0;
     const technical = parseInt(marks.technical) || 0;
@@ -312,17 +404,27 @@ function Home() {
     return totalMarks >= passThreshold ? 'pass' : 'fail';
   };
 
-  // Calculate Attendance Percentage
+  /**
+   * Calculates attendance percentage
+   * @returns {number} - Attendance percentage
+   */
   const calculateAttendancePercentage = () => {
     if (attendance.length === 0) return 0;
-
     const presentCount = attendance.filter(record => record.attendance === 'Present').length;
     const totalDays = attendance.length;
     return (presentCount / totalDays) * 100;
   };
 
-
+  /**
+   * Counts tasks by status
+   * @param {string} status - The task status to count
+   * @returns {number} - Count of tasks with the given status
+   */
   const getTaskCounts = (status) => task.filter((task) => task.task_status === status).length;
+
+
+
+  // If payment is overdue, show payment alert
 
   if (dueDate < formattedDate) {
 
@@ -366,8 +468,8 @@ function Home() {
                   <h3><IoIosVideocam style={{ height: '25px', width: '25px' }} /></h3>
                 </Link>
                 <div className="topsection_card_userhomepage_down_Announcements" onClick={() => fetchData('announcement')}>
-                  <span className='res_down_menus'>Announcements</span>
-                  <h3><HiOutlineSpeakerphone style={{ height: '22px', width: '22px' }} /></h3>
+                  <span className='res_down_menus'>Mail Box</span>
+                  <h3><IoIosMailUnread style={{ height: '22px', width: '22px' }} /></h3>
                 </div>
                 <Link to={'/ChangePass'} className='change_password_button' >Change Password</Link>
 
@@ -399,7 +501,7 @@ function Home() {
                 <h3><IoIosCard style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Payment</span></h3>
               </div>
               <div className={`topsection_card_userhomepage ${activeMenu === 'announcement' ? 'active' : ''}`} onClick={() => fetchData('announcement')}>
-                <h3><HiOutlineSpeakerphone style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Announcements</span></h3>
+                <h3><IoIosMailUnread style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Mail Box</span></h3>
               </div>
               <div className={`topsection_card_userhomepage ${activeMenu === 'Project' ? 'active' : ''}`} onClick={() => fetchData('Project')}>
                 <h3><FaLaptopCode style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Project</span></h3>
@@ -549,6 +651,9 @@ function Home() {
 
                 {/*  Sections tasks*/}
 
+                {
+                  taskForm && <TaskReply />
+                }
 
                 {activeSection === 'task' && (
                   <div className="task-container">
@@ -592,6 +697,7 @@ function Home() {
                               <th>Description</th>
                               <th>Date Assigned</th>
                               <th>Status</th>
+                              <th>Upload</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -608,6 +714,18 @@ function Home() {
                                     })}
                                   </td>
                                   <td>{task.task_status}</td>
+                                  <td>
+
+                                    {task.task_status === 'Pending' ? <TaskReply task={task} /> : <button
+
+                                      className="upload-button"
+                                      style={{ color: 'green', backgroundColor: 'transparent' }}
+                                    >
+                                      ✔
+                                    </button>}
+
+
+                                  </td>
                                 </tr>
                               ))}
                           </tbody>
@@ -616,6 +734,7 @@ function Home() {
                     )}
                   </div>
                 )}
+
 
                 {/*  Sections Projects*/}
 
@@ -833,6 +952,9 @@ function Home() {
                                 )}
                               </div>
 
+                              {/** ****************************************************** */}
+
+
                               <div key={index} className="batch-card">
                                 <h1 className="batch-title">Batch Details</h1>
                                 <h3>{student}</h3>
@@ -842,7 +964,7 @@ function Home() {
                                   <p className="status">{batchItem.status || "Status Not Available"}</p>
                                 </div>
                                 <div className="batch-body">
-                                  <p><strong><FaIdCard style={{ marginRight: '8px' }} />Student ID:</strong> {student_id}</p>
+                                  <p><strong><FaIdCard style={{ marginRight: '8px' }} />Student ID:</strong> {training_id}</p>
                                   <p><strong> <FaClock style={{ marginRight: '8px' }} />Start Time:</strong> {batchItem.start_time || "Not Available"}</p>
                                   <p><strong><FaClock style={{ marginRight: '8px' }} />End Time:</strong> {batchItem.end_time || "Not Available"}</p>
                                   <p><strong><FaSchool style={{ marginRight: '8px' }} />Course Name:</strong> {batchItem.course_name || "Not Available"}</p>
@@ -852,6 +974,10 @@ function Home() {
                                   <p><strong><IoIosCard style={{ marginRight: '8px' }} />Course Fee:</strong> {batchItem.fee}/-</p>
                                 </div>
                               </div>
+
+                              {/** ********************************************************************/}
+
+
                             </div>
                           ))
                         )
@@ -901,98 +1027,65 @@ function Home() {
                 )}
 
                 {/* Sections study announcement*/}
-
                 {activeSection === 'announcement' && (
                   <div className="announcement-container">
-                    <h1 className="announcement-title">Announcements</h1>
-                    <button className='anouncement_button_per' onClick={() => fetchData('personalannouncement')}>Personal Announcements</button>
+                    <h1 className="announcement-title"><IoMail className='mail-icon-head' />Mail Box</h1>
 
-                    {nodata ? (
-                      <div>
-                        <h1>No data found</h1>
+                    {/* Gmail-style Tabs */}
+                    <div className="announcement-tabs">
+                      <div
+                        className={`tab-item ${selectedType === 'batch' ? 'active-tab' : ''}`}
+                        onClick={() => setSelectedType('batch')}
+                      >
+                        📩 Batch Mails
                       </div>
-                    ) : loading ? (
-                      <div className="loading-spinner">
-                        <div className="spinner"></div>
+                      <div
+                        className={`tab-item ${selectedType === 'personal' ? 'active-tab' : ''}`}
+                        onClick={() => setSelectedType('personal')}
+                      >
+                        👤 Personal Mails
                       </div>
-                    ) : announcement.length === 0 ? (
-                      <div className="box_notdata">
-                        <p className="no-announcement">No announcements available</p>
-                      </div>
+                    </div>
+
+                    {loading ? (
+                      <div className="loading-spinner"><div className="spinner"></div></div>
+                    ) : nodata ? (
+                      <div className="box_notdata"><h1>No data found</h1></div>
                     ) : (
-                      <div className="announcement-grid">
-                        {announcement
-                          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) // Sort by latest date
-                          .map((item) => (
-                            <div key={item.id} className="announcement-card">
-                              <h3 className="announcement-card-title">{item.title}</h3>
-                              <p className="announcement-description">{item.description}</p>
-                              {item.image && (
-                                <div className="announcement-image">
-                                  <img
-                                    src={`https://techwingsys.com/billtws/uploads/announcements/${item.image}`}
-                                    alt={item.title}
-                                  />
-                                </div>
-                              )}
-                              <p className="announcement-date">
-                                Posted on: {new Date(item.created_at).toLocaleDateString()}
-                              </p>
-                              <p className="announcement-batch">Batch: {item.batch}</p>
-                            </div>
-                          ))}
+                      <div className="announcement-full">
+                        <div className="announcement-grid">
+                          {(selectedType === 'batch' ? announcement : personalAnn)
+                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                            .map((item) => (
+                              <div
+                                key={item.id || item.message_id}
+                                className={`announcement-card ${selectedItem && selectedItem.id === item.id ? 'highlighted-card' : ''}`}
+                                onClick={() => handleViewMore(item)}
+                              > <FaBell className='bell-icon-mail' />
+                                <h4
+                                  className="announcement-card-title"
+                                  dangerouslySetInnerHTML={{ __html: cleanHtml(item.title) }}
+                                ></h4>
+                                <p className='announcement-p-des'>
+                                  {getShortHtmlLength(item.description, 10)}
+                                  <span
+                                    className='announcement-p-span'
+
+                                    onClick={() => handleViewMore(item)}
+                                  >
+                                    See more
+                                  </span>
+                                </p>
+
+                              </div>
+                            ))}
+                        </div>
                       </div>
                     )}
+
+                    {selectedItem && <ViewAnnou content={selectedItem} onClose={closeViewMore} />}
                   </div>
                 )}
-
-
-
-
-                {/* Sections personal announcement*/}
-
-
-                {activeSection === 'personalannouncement' && (
-                  <div className="announcement-container">
-                    <h1 className="announcement-title">Announcements</h1>
-                    <button className='anouncement_button_per' onClick={() => fetchData('announcement')}>Announcements</button>
-
-                    {nodata ? (
-                      <div>
-                        <h1>No data found</h1>
-                      </div>
-                    ) : loading ? (
-                      <div className="loading-spinner">
-                        <div className="spinner"></div>
-                      </div>
-                    ) : personalAnn.length === 0 ? (
-                      <div className="box_notdata">
-                        <p className="no-announcement">No announcements available</p>
-                      </div>
-                    ) : (
-                      <div className="announcement-grid">
-                        {personalAnn
-                          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                          .map((item) => (
-                            <div key={item.message_id} className="announcement-card">
-
-                              <h3 className="announcement-card-title">{item.message_details}</h3>
-
-
-                              <p className="announcement-description">{item.message_details}</p>
-
-
-                              <p className="announcement-date">
-                                Posted on: {new Date(item.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-
 
 
 
@@ -1040,52 +1133,46 @@ function Home() {
               {/* Sections Announcement*/}
 
               <div className="third_section_main">
-                {homeAnnouncement && homeAnnouncement.title ? (
-                  <div className="announcement_card">
-                    <h3 className="announcement_title">Recent Announcements</h3>
-                    <div className="announcement_icon">📢</div>
-                    <div className="announcement_content">
-                      <h3 className="announcement_title">{homeAnnouncement.title}</h3>
-                      <p className="announcement_text">{homeAnnouncement.description}</p>
-                      {homeAnnouncement.image && (
-                        <div className="announcement_image">
-                          <img
-                            height={'100px'}
-                            width={'100px'}
-                            style={{marginBottom:"5px"}}
-                            src={`https://techwingsys.com/billtws/uploads/announcements/${homeAnnouncement.image}`}
-                            alt="Announcement"
-                          />
-                        </div>
-                      )}
-                      <p className="announcement_date">
-                        Posted on: {new Date(homeAnnouncement.created_at).toLocaleDateString()}
-                      </p>
-             
-                    </div>
+                <div className="mailbox-container">
+                  <div className="mailbox-header">
+                    <span className="mailbox-icon">📧</span>
+                    <h2>Recent Mail Box Updates</h2>
                   </div>
-                ) : (
-                  <div className="no_announcement_message">
-                    <div className="announcement_card">
-                      <h3 className="announcement_title">Recent Announcements</h3>
-                      <div className="announcement_icon">📢</div>
-                      <div className="announcement_content">
-                        <h3 className="announcement_title">No recent announcements available.</h3>
 
+                  {homeAnnouncement
+                    .filter(item => item && item.title) // filter out empty or invalid items
+                    .map((item, index) => (
+                      <div className="mailbox-card" key={index} onClick={() => handleViewMore(item)}>
+
+                        <h4 className="mailbox-title">
+                          <LuBellDot className='bell-icon-mail-home' />
+                          {cleanHtml(item.title)}
+                        </h4>
+                        <p className="mailbox-body">
+                          {getShortHtmlLength(item.description, 10)}
+                          <span
+                            className="span-home-mail"
+                            onClick={() => handleViewMore(item)}
+                          >
+                            Open
+                          </span>
+                        </p>
                       </div>
-                    </div>
+                    ))}
 
-                  </div>
-                )}
+                </div>
+                {selectedItem && <ViewAnnou content={selectedItem} onClose={closeViewMore} />}
               </div>
-            </section>
-          </div>
 
-        </div>
+
+            </section>
+          </div >
+
+        </div >
 
 
         {/* Sections Sidebar Down side*/}
-        <div className="topSectionMain_div_userHomepage_down">
+        <div div className="topSectionMain_div_userHomepage_down" >
           <div className="topsection_inner_div_userHompage_down">
             <div
               className="topsection_card_userhomepage_down"
@@ -1193,7 +1280,7 @@ function Home() {
                     className="topsection_card_userhomepage_down-more"
                     onClick={() => fetchData('material')}
                   >
-                    <span className="res_down_menus-more">Study Materia</span>
+                    <span className="res_down_menus-more">Study Material</span>
                     <h3>
                       <FaNoteSticky
                         style={{ height: '25px', width: '25px' }}
@@ -1219,7 +1306,7 @@ function Home() {
             </div>
             {/* —— END “More” CARD —— */}
           </div>
-        </div>
+        </div >
 
 
         <Footer />
