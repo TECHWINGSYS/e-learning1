@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineLogout } from "react-icons/ai";
 import {
-  FaCalendarMinus, FaCheckCircle, FaExclamationCircle, FaExclamationTriangle, FaFolderOpen, FaHourglassHalf,
+  FaCalendarMinus, FaCheckCircle, FaEnvelopeOpen, FaExclamationCircle, FaExclamationTriangle, FaFolderOpen, FaHourglassHalf,
   FaIdCard, FaList, FaRegKeyboard, FaSchool, FaSpinner, FaTasks
 } from "react-icons/fa";
 import { MdInsertChart } from "react-icons/md";
@@ -41,6 +41,8 @@ import { IoIosMailUnread } from "react-icons/io";
 import { IoMail } from "react-icons/io5";
 import { FaBell } from "react-icons/fa";
 import { LuBellDot } from "react-icons/lu";
+import { BsCoin } from "react-icons/bs";
+import Earn from './Earn';
 
 
 /**
@@ -72,13 +74,14 @@ function Home() {
   const [task, setTask] = useState([]) // Stores tasks
   const [project, setProject] = useState([]) // Stores projects
   var [dueDate, setDueDate] = useState(null) // Stores payment due date
-  const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]); // Gets login info from Redux
   var [addTime, setAddTime] = useState(false) // Controls ad display
   const [showMore, setShowMore] = useState(false); // Controls 'More' dropdown
   var [taskForm, setTaskForm] = useState(false) // Controls task form display
   const [viewMore, setViewMore] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedType, setSelectedType] = useState('batch');   // Toggle between 'batch' or 'personal'
+  const [coinsEarned, setCoinsEarned] = useState();
+  const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]); // Gets login info from Redux
 
 
   const handleViewMore = (item) => {
@@ -140,6 +143,18 @@ function Home() {
         const lastPayment = response.data[response.data.length - 1];
         setPaymentData(lastPayment);
         setSutdent(response2.data[0].name)
+
+        const fetchEarnings = async () => {
+          try {
+            const res = await TokenRequest.get(`/student/earnings?student_id=${logininfom.student_id}`);
+            console.log(res.data.total_earnings);
+            setCoinsEarned(res.data.total_earnings)
+
+          } catch (err) {
+            console.error('Fetch error:', err);
+          }
+        };
+        fetchEarnings()
       }
       billhome();
     }
@@ -181,41 +196,40 @@ function Home() {
           if (batchName) {
 
             try {
-              const announcementResponse = await TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchName}`);
-              const responseano = await TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`);
+              // Fetch both announcements in parallel
+              const [generalResponse, personalResponse] = await Promise.allSettled([
+                TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchName}`),
+                TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`)
+              ]);
 
-              console.log("announcementResponse:", announcementResponse);
-              console.log("responseano:", responseano);
+              // Process successful responses
+              const generalAnnouncements = generalResponse.status === 'fulfilled'
+                ? generalResponse.value.data.slice(-4).reverse()
+                : [];
 
-              // Get last 3 items (if available) from each
-              const annList = announcementResponse.data.slice(-4).reverse(); // reverse for latest-first order
-              const anoList = responseano.data.slice(-4).reverse();
+              const personalAnnouncements = personalResponse.status === 'fulfilled'
+                ? personalResponse.value.data.slice(-4).reverse()
+                : [];
 
-              // Merge alternatively
-              const mergedAnnouncements = [];
-              for (let i = 0; i < 6; i++) {
-                if (annList[i]) mergedAnnouncements.push(annList[i]);
-                if (anoList[i]) mergedAnnouncements.push(anoList[i]);
-                if (mergedAnnouncements.length >= 6) break;
-              }
+              // Combine announcements (personal first, then general)
+              const mergedAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
 
-              // Fill with placeholders if less than 3
-              while (mergedAnnouncements.length < 5) {
-                mergedAnnouncements.push({ message: "No announcement available." });
-              }
+              // Handle empty state
+              const finalAnnouncements = mergedAnnouncements.length > 0
+                ? mergedAnnouncements.slice(0, 6)
+                : [{ title: "No announcements", description: "There are no announcements available at this time." }];
 
-              setHomeAnnouncement(mergedAnnouncements);
+              setHomeAnnouncement(finalAnnouncements);
 
             } catch (error) {
-              console.warn("Error fetching announcements:", error);
+              console.warn("Error in announcement processing:", error);
               setHomeAnnouncement([
-                { message: "Unable to fetch announcements." },
-                { message: "Unable to fetch second announcement." },
-                { message: "Error occurred." }
+                {
+                  title: "Connection issue",
+                  description: "We couldn't fetch announcements. Please try again later."
+                }
               ]);
             }
-
-
           }
           break;
 
@@ -276,34 +290,39 @@ function Home() {
           setNodata(false);
 
           try {
-            const response = await TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`);
-            console.log("from batch-annoce",response.data);
-            
+            // Fetch both endpoints in parallel
+            const [generalResponse, personalResponse] = await Promise.allSettled([
+              TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`),
+              TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`)
+            ]);
 
-            if (response.data.length === 0) {
+            // Process responses
+            const generalAnnouncements = generalResponse.status === 'fulfilled'
+              ? generalResponse.value.data
+              : [];
+
+            const personalAnnouncements = personalResponse.status === 'fulfilled'
+              ? personalResponse.value.data
+              : [];
+
+            // Combine announcements (personal first)
+            const allAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
+
+            if (allAnnouncements.length === 0) {
               setAnnouncement([]);
-              setActiveSection('');
+              setPersonalAnn([]);
               setNodata(true);
             } else {
-              setAnnouncement(response.data);
-            }
-
-            const response5 = await TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`);
-            if (response5.data.length === 0) {
-              setPersonalAnn([]);
-            } else {
-              setPersonalAnn(response5.data);
+              setAnnouncement(generalAnnouncements);
+              setPersonalAnn(personalAnnouncements);
             }
 
           } catch (error) {
-            console.error("Error fetching announcements:", error);
+            console.error("Error in announcement processing:", error);
             setNodata(true);
-            setAnnouncement([]);
-            setPersonalAnn([]);
           } finally {
             setLoading(false);
           }
-          setActiveSection('announcement');
           break;
 
 
@@ -461,16 +480,31 @@ function Home() {
               </div>
 
               <div className='rightnav'>
+
+                <h4 className="menus_right-earn" onClick={() => { setActiveSection('earn') }}>
+                  <BsCoin className="earn-icon" />
+                  <span className='earn-text-small'>₹{
+                     coinsEarned 
+                  }
+                  </span> {/**change the amount to earnings */}
+                  <span className="earn-text">Earn</span>
+                  <span className="earn-text-hover">Your Earinings ₹{
+                    coinsEarned 
+                  }
+                  </span>
+                </h4>
+
+
                 <Link to={{
                   pathname: '/ClassVideo',
                 }} style={{ textDecoration: 'none' }}
                   state={{ batchname }} className="topsection_card_userhomepage_down_video" >
                   <h3><IoIosVideocam style={{ height: '25px', width: '25px' }} /></h3>
                 </Link>
-                <div className="topsection_card_userhomepage_down_Announcements" onClick={() => fetchData('announcement')}>
-                  <span className='res_down_menus'>Mail Box</span>
-                  <h3><IoIosMailUnread style={{ height: '22px', width: '22px' }} /></h3>
-                </div>
+
+
+
+
                 <Link to={'/ChangePass'} className='change_password_button' >Change Password</Link>
 
                 <h3 onClick={logout} className='menus_right'><AiOutlineLogout />  </h3>
@@ -649,11 +683,19 @@ function Home() {
                 )}
 
 
+
+
                 {/*  Sections tasks*/}
 
                 {
                   taskForm && <TaskReply />
                 }
+
+                {activeSection === 'earn' && (
+                  <div>
+                    <Earn />
+                  </div>
+                )}
 
                 {activeSection === 'task' && (
                   <div className="task-container">
@@ -912,7 +954,7 @@ function Home() {
                                             ? 'Payment Completed'
                                             : (
                                               <div>
-                                                Balance Amount <RiMoneyRupeeCircleFill className='money-icon' />{paymentData.balance_amount}
+                                                Balance Amount <RiMoneyRupeeCircleFill className='money-icon-home' />{paymentData.balance_amount}
                                               </div>
                                             )
                                         }
@@ -932,15 +974,25 @@ function Home() {
                                         <p
                                           className="emi-status-text"
                                           style={{
-                                            '--paid-percent': paymentData.balance_amount === 0
-                                              ? '100%'
-                                              : ((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2) + '%',
+                                            '--paid-percent':
+                                              paymentData && paymentData.balance_amount === 0
+                                                ? '100%'
+                                                : paymentData && paymentData.no_of_emi != null && batchItem?.emi
+                                                  ? ((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2) + '%'
+                                                  : '0%',
                                           }}
                                         >
-                                          {paymentData.balance_amount === 0
-                                            ? 'Paid Off'
-                                            : `${((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2)}% Paid`}
+                                          {
+                                            !paymentData || paymentData.no_of_emi == null || !batchItem?.emi
+                                              ? <div className="loading-spinner-pay">
+                                                <div className="spinner-pay"></div>
+                                              </div>
+                                              : paymentData.balance_amount === 0
+                                                ? 'Paid Off'
+                                                : `${((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2)}% Paid`
+                                          }
                                         </p>
+
 
                                       </div>
 
@@ -1056,29 +1108,37 @@ function Home() {
                         <div className="announcement-grid">
                           {(selectedType === 'batch' ? announcement : personalAnn)
                             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                            .map((item) => (
-                              <div
-                                key={item.id || item.message_id}
-                                className={`announcement-card ${selectedItem && selectedItem.id === item.id ? 'highlighted-card' : ''}`}
-                                onClick={() => handleViewMore(item)}
-                              > <FaBell className='bell-icon-mail' />
-                                <h4
-                                  className="announcement-card-title"
-                                  dangerouslySetInnerHTML={{ __html: cleanHtml(item.title) }}
-                                ></h4>
-                                <p className='announcement-p-des'>
-                                  {getShortHtmlLength(item.description, 10)}
-                                  <span
-                                    className='announcement-p-span'
-
-                                    onClick={() => handleViewMore(item)}
-                                  >
-                                    See more
-                                  </span>
-                                </p>
-
-                              </div>
-                            ))}
+                            .length > 0 ? (
+                            (selectedType === 'batch' ? announcement : personalAnn)
+                              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                              .map((item) => (
+                                <div
+                                  key={item.id || item.message_id}
+                                  className={`announcement-card ${selectedItem && selectedItem.id === item.id ? 'highlighted-card' : ''}`}
+                                  onClick={() => handleViewMore(item)}
+                                >
+                                  <FaBell className='bell-icon-mail' />
+                                  <h4
+                                    className="announcement-card-title"
+                                    dangerouslySetInnerHTML={{ __html: cleanHtml(item.title) }}
+                                  ></h4>
+                                  <p className='announcement-p-des'>
+                                    {getShortHtmlLength(item.description, 10)}
+                                    <span
+                                      className='announcement-p-span'
+                                      onClick={() => handleViewMore(item)}
+                                    >
+                                      See more
+                                    </span>
+                                  </p>
+                                </div>
+                              ))
+                          ) : (
+                            <div className="no-announcements-message">
+                              <FaEnvelopeOpen className="empty-icon" />
+                              <p>No mail available at this time</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1133,32 +1193,42 @@ function Home() {
               {/* Sections Announcement*/}
 
               <div className="third_section_main">
+
+
+
                 <div className="mailbox-container">
                   <div className="mailbox-header">
                     <span className="mailbox-icon">📧</span>
                     <h2>Recent Mail Box Updates</h2>
                   </div>
-
-                  {homeAnnouncement
-                    .filter(item => item && item.title) // filter out empty or invalid items
-                    .map((item, index) => (
-                      <div className="mailbox-card" key={index} onClick={() => handleViewMore(item)}>
-
-                        <h4 className="mailbox-title">
-                          <LuBellDot className='bell-icon-mail-home' />
-                          {cleanHtml(item.title)}
-                        </h4>
-                        <p className="mailbox-body">
-                          {getShortHtmlLength(item.description, 10)}
-                          <span
-                            className="span-home-mail"
-                            onClick={() => handleViewMore(item)}
-                          >
-                            Open
-                          </span>
-                        </p>
+                  {homeAnnouncement && homeAnnouncement.length > 0 ? (
+                    homeAnnouncement
+                      .filter(item => item && item.title) // filter out empty or invalid items
+                      .map((item, index) => (
+                        <div className="mailbox-card" key={index} onClick={() => handleViewMore(item)}>
+                          <h4 className="mailbox-title">
+                            <LuBellDot className='bell-icon-mail-home' />
+                            {cleanHtml(item.title)}
+                          </h4>
+                          <p className="mailbox-body">
+                            {getShortHtmlLength(item.description, 10)}
+                            <span
+                              className="span-home-mail"
+                              onClick={() => handleViewMore(item)}
+                            >
+                              Open
+                            </span>
+                          </p>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="no-mail-message">
+                      <div className="no-announcements-message">
+                        <FaEnvelopeOpen className="empty-icon" />
+                        <p>No mail available at this time</p>
                       </div>
-                    ))}
+                    </div>
+                  )}
 
                 </div>
                 {selectedItem && <ViewAnnou content={selectedItem} onClose={closeViewMore} />}
@@ -1234,17 +1304,12 @@ function Home() {
               </h3>
             </div>
 
-            <div
-              className="topsection_card_userhomepage_down"
-              onClick={() => fetchData('Project')}
-            >
-              <span className="res_down_menus">Project</span>
-              <h3>
-                <FaLaptopCode
-                  style={{ marginRight: '4%', height: '25px', width: '25px' }}
-                />
-              </h3>
+            <div className="topsection_card_userhomepage_down" onClick={() => fetchData('announcement')}>
+              <span className='res_down_menus'>Mail Box</span>
+              <h3><IoIosMailUnread style={{ marginRight: '4%', height: '25px', width: '25px' }} /></h3>
             </div>
+
+
 
             {/* —— NEW “More” CARD —— */}
             <div
@@ -1284,6 +1349,18 @@ function Home() {
                     <h3>
                       <FaNoteSticky
                         style={{ height: '25px', width: '25px' }}
+                      />
+                    </h3>
+                  </div>
+
+                  <div
+                    className="topsection_card_userhomepage_down-more"
+                    onClick={() => fetchData('Project')}
+                  >
+                    <span className="res_down_menus-more">Project</span>
+                    <h3>
+                      <FaLaptopCode
+                        style={{ marginRight: '4%', height: '25px', width: '25px' }}
                       />
                     </h3>
                   </div>

@@ -1,32 +1,33 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const studentRouter = require('./Routers/studentRouter');
+const studentRouter = require('./Routers/studentRouter'); // ✅ Your router
+const http = require('http');
 
 dotenv.config();
 
 const app = express();
 
-// CORS configuration
-
+// ✅ CORS middleware
 app.use(cors());
-// {
-//   origin: 'http://localhost:5173',
-//   methods: 'GET,POST,PUT,DELETE',
-//   allowedHeaders: 'Content-Type,Authorization'
-// }
-
 app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   next();
 });
 
+// ✅ Create HTTP server
+const server = http.createServer(app);
 
-// Route setup
-app.use('/student', studentRouter);
 
+
+// ✅ Setup routes
+app.use('/student', studentRouter); // e.g., /student/add-notification
+
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+

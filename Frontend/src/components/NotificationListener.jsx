@@ -1,42 +1,48 @@
-import React, { useEffect, useState } from 'react';
+// NotificationHandler.jsx
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import io from 'socket.io-client';
+import './NotificationHandler.css'; // Optional for styling
 
-function NotificationListener() {
-  const [permissionRequested, setPermissionRequested] = useState(false);
+const socket = io('http://localhost:5000'); // Replace with your backend URL
+
+const NotificationHandler = () => {
+  const [permission, setPermission] = useState(Notification.permission);
 
   useEffect(() => {
-    // Step 1: Ask for permission once
-    if ("Notification" in window && Notification.permission === "default" && !permissionRequested) {
-      Notification.requestPermission().then(permission => {
-        console.log("Notification permission:", permission);
-        setPermissionRequested(true);
-      });
+    // Request permission if not already granted
+    if (permission !== 'granted') {
+      setTimeout(() => {
+        Notification.requestPermission().then(result => {
+          setPermission(result);
+        });
+      }, 1000); // slight delay after component mounts
     }
 
-    // Step 2: Simulated fetch logic (replace this with your API call)
-    const interval = setInterval(async () => {
-      // --- Mock fetch for demo (replace with real API call) ---
-      const latestMessage = {
-        id: "announcement-001",
-        message: "🎉 New class is uploaded!",
-      };
+    // Listen to socket notifications
+    socket.on('new_notification', (data) => {
+      console.log('Received notification:', data);
 
-      // Step 3: Prevent duplicate notifications using localStorage
-      const lastSeenId = localStorage.getItem("lastSeenAnnouncementId");
-
-      if (latestMessage.id !== lastSeenId && Notification.permission === "granted") {
-        new Notification("📢 New Announcement", {
-          body: latestMessage.message,
-          icon: "/logo192.png", // Optional icon
-        });
-
-        localStorage.setItem("lastSeenAnnouncementId", latestMessage.id);
+      if (permission === 'granted') {
+        showNotification(data.title, data.message);
+      } else {
+        toast.info(`${data.title}: ${data.message}`);
       }
-    }, 10000); // every 10 seconds
+    });
 
-    return () => clearInterval(interval);
-  }, [permissionRequested]);
+    return () => {
+      socket.off('new_notification');
+    };
+  }, [permission]);
 
-  return null; // This component is invisible
-}
+  const showNotification = (title, body) => {
+    new Notification(title, {
+      body,
+      icon: '/notification-icon.png', // Optional icon path
+    });
+  };
 
-export default NotificationListener;
+  return null; // This component just runs in background
+};
+
+export default NotificationHandler;
