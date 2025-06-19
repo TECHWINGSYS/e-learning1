@@ -11,15 +11,16 @@ const getTokenFromLocalStorage = () => {
 
 // Base URL for both instances
 const SampleUrl = 'https://e-learning-clj3.onrender.com';
-// https://studentsmangement.onrender.com
-// http://localhost:5000
+
+
 // Basic request (no token needed)
 export const basicRequest = axios.create({
   baseURL: SampleUrl
 });
 
 // Token request instance
-export const TokenRequest = axios.create({
+export const 
+TokenRequest = axios.create({
   baseURL: SampleUrl
 });
 

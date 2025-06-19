@@ -15,7 +15,8 @@ function Aptitude() {
     const [wrongAnswers, setWrongAnswers] = useState([]);
     const [completedTests, setCompletedTests] = useState({});
 
-    const loginInfo = useSelector((state) => state.userlogin?.LoginInfo[0]);
+    const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]);
+    var id = logininfom.selectedTrainingId ? logininfom.selectedTrainingId : logininfom.trainingIdArray[0]
 
     const monthNames = {
         '01': 'January', '02': 'February', '03': 'March', '04': 'April',
@@ -24,51 +25,71 @@ function Aptitude() {
     };
     async function fetchQuestions() {
         setLoading(true);
+
+        let batchName = '';
+        let data = [];
+        let reviewData = [];
+
+        // Month name to number mapping
+        const monthNameToNumber = {
+            'january': '01',
+            'february': '02',
+            'march': '03',
+            'april': '04',
+            'may': '05',
+            'june': '06',
+            'july': '07',
+            'august': '08',
+            'september': '09',
+            'october': '10',
+            'november': '11',
+            'december': '12'
+        };
+
+        // 1. Fetch batch name
         try {
-            const batchData = await TokenRequest.get(`/student/getdatatraining?student_id=${loginInfo.student_id}`);
-            const batchName = batchData.data[0]?.batch;
+            const batchData = await TokenRequest.get(`/student/getdatatraining?training_id=${id}`);
+            batchName = batchData.data[0]?.batch || '';
+        } catch (err) {
+            console.error("Failed to fetch training data:", err);
+        }
 
-            // Fetch aptitude questions
-            const res = await TokenRequest.get(`/student/getAptitude?batchname=${batchName}`);
-            const data = res.data;
+        // 2. Fetch aptitude questions
+        try {
+            if (batchName) {
+                const res = await TokenRequest.get(`/student/getAptitude?batchname=${batchName}`);
+                data = res.data;
+                console.log("Aptitude questions:", data);
+                setQuestions(data);
+                const uniqueMonths = [...new Set(data.map(q => q.month))];
+                setMonths(uniqueMonths);
+            }
+        } catch (err) {
+            console.error("Failed to fetch aptitude questions:", err);
+        }
 
-            // Fetch completed tests
-            const reviewResponse = await TokenRequest.get(`/student/getdatareview?student_id=${loginInfo.student_id}`);
-            console.log("Review data:", reviewResponse.data);
+        // 3. Fetch review data
+        try {
+            const reviewResponse = await TokenRequest.get(`/student/getdatareview?student_id=${logininfom.student_id}`);
+            reviewData = reviewResponse.data;
+            console.log("Review data:", reviewData);
+        } catch (err) {
+            console.error("Failed to fetch review data:", err);
+        }
 
-            // Create a mapping of month names to numbers
-            const monthNameToNumber = {
-                'january': '01',
-                'february': '02',
-                'march': '03',
-                'april': '04',
-                'may': '05',
-                'june': '06',
-                'july': '07',
-                'august': '08',
-                'september': '09',
-                'october': '10',
-                'november': '11',
-                'december': '12'
-            };
-
-            // Process completed tests data
+        // 4. Process completed tests
+        try {
             const completedData = {};
 
-            reviewResponse.data.forEach(item => {
+            reviewData.forEach(item => {
                 if (item.aptitude && item.month) {
                     const monthLower = item.month.toLowerCase().trim();
-                    console.log(monthLower);
-
                     const monthNum = monthNameToNumber[monthLower];
 
-                    if (monthNum) {
-                        // Find the corresponding question month (YYYY-MM format)
+                    if (monthNum && data.length > 0) {
                         data.forEach(q => {
                             if (q.month) {
                                 const [year, qMonth] = q.month.split('-');
-                                console.log(qMonth, monthNum);
-
                                 if (qMonth === monthNum) {
                                     completedData[q.month] = item.aptitude;
                                 }
@@ -79,23 +100,20 @@ function Aptitude() {
             });
 
             console.log("Completed tests:", completedData);
-
-            setQuestions(data);
             setCompletedTests(completedData);
-            const uniqueMonths = [...new Set(data.map(q => q.month))];
-            setMonths(uniqueMonths);
         } catch (err) {
-            console.error("Failed to fetch data", err);
-        } finally {
-            setLoading(false);
+            console.error("Failed to process completed tests:", err);
         }
+
+        setLoading(false);
     }
 
+
     useEffect(() => {
-        if (loginInfo?.student_id) {
+        if (logininfom?.student_id) {
             fetchQuestions();
         }
-    }, [loginInfo]);
+    }, [logininfom]);
 
     const handleMonthSelect = (month) => {
         setSelectedMonth(month);
@@ -142,12 +160,12 @@ function Aptitude() {
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
             const monthName = monthNames[parseInt(monthNum) - 1];
-            console.log(loginInfo.student_id);
+            console.log(logininfom.student_id);
             console.log(total);
             console.log(monthName);
 
             const response = await TokenRequest.post('/student/addaptitudemark', {
-                student_id: loginInfo.student_id,
+                student_id: logininfom.student_id,
                 aptitude: total,
                 month: monthName
             });

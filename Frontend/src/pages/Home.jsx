@@ -117,6 +117,7 @@ function Home() {
    */
   async function logout() {
     dispatch(LogoutData())
+    setDueDate(null)
     await setTimeout(() => {
       window.location.reload();
     }, 0);
@@ -127,27 +128,38 @@ function Home() {
     setLoading(true);
     showAd()
     if (logininfom) {
-      setTraining_id(logininfom.training_id);
+      setTraining_id(logininfom.selectedTrainingId ? logininfom.selectedTrainingId : logininfom.trainingIdArray[0]);
     }
   }, [logininfom]);
 
 
   // Effect to fetch bill and student data when training_id or active section changes
   useEffect(() => {
+
     if (training_id && activeSection === 'dashboard') {
       async function billhome() {
         await fetchData('batchDetails');
+        console.log("trainnid", training_id);
+
         let response = await TokenRequest.get(`/student/getdatabill?training_id=${training_id}`);
         let response2 = await TokenRequest.get(`/student/getstudent?student_id=${logininfom.student_id}`);
         setDueDate(response.data[response.data.length - 1].due_date ? response.data[response.data.length - 1].due_date : null)
+        console.log(response.data[response.data.length - 1].due_date);
+        console.log("from bill home payment", response);
+
+
         const lastPayment = response.data[response.data.length - 1];
+        console.log('last payment', lastPayment);
+
         setPaymentData(lastPayment);
         setSutdent(response2.data[0].name)
+        console.log("student details", response2.data[0]);
+
 
         const fetchEarnings = async () => {
           try {
             const res = await TokenRequest.get(`/student/earnings?student_id=${logininfom.student_id}`);
-            console.log(res.data.total_earnings);
+
             setCoinsEarned(res.data.total_earnings)
 
           } catch (err) {
@@ -161,8 +173,11 @@ function Home() {
   }, [training_id, activeSection]);
 
   // Current date formatted as YYYY-MM-DD
-  const date = new Date();
-  const formattedDate = date.toISOString().split('T')[0];
+  if (dueDate) {
+    var date = new Date();
+    var formattedDate = date.toISOString().split('T')[0];
+  }
+
 
   /**
    * Fetches data for different sections based on the selected menu item
@@ -236,7 +251,7 @@ function Home() {
 
         case 'reviews':
           setActiveSection('reviews');
-          response = await TokenRequest.get(`/student/getdatareview?training_id=${training_id}`);
+          response = await TokenRequest.get(`/student/getdatareview?student_id=${logininfom.student_id}`);
           if (response.data.length === 0) {
             setReviews([]);
             setActiveSection(' ');
@@ -445,7 +460,7 @@ function Home() {
 
   // If payment is overdue, show payment alert
 
-  if (dueDate < formattedDate) {
+  if (dueDate && dueDate < formattedDate) {
 
     return (
       <div className="payment-container">
@@ -484,12 +499,12 @@ function Home() {
                 <h4 className="menus_right-earn" onClick={() => { setActiveSection('earn') }}>
                   <BsCoin className="earn-icon" />
                   <span className='earn-text-small'>₹{
-                     coinsEarned 
+                    coinsEarned
                   }
                   </span> {/**change the amount to earnings */}
                   <span className="earn-text">Earn</span>
                   <span className="earn-text-hover">Your Earinings ₹{
-                    coinsEarned 
+                    coinsEarned
                   }
                   </span>
                 </h4>
@@ -618,7 +633,7 @@ function Home() {
 
                     {nodata ? (
                       <div className='box_notdata'>
-                        <h1>No data found</h1>
+                        <h4>No Attendance Yet Now</h4>
                       </div>
                     ) : (
                       loading ? (
@@ -725,7 +740,7 @@ function Home() {
                     {/* Task Table */}
                     {nodata ? (
                       <div className="box-notdata">
-                        <h1>No Tasks Found</h1>
+                        <h4>No Task Yet Now</h4>
                       </div>
                     ) : loading ? (
                       <div className="loading-spinner">
@@ -968,30 +983,33 @@ function Home() {
                                         style={{
                                           '--paid-percent': paymentData.balance_amount === 0
                                             ? '100%'
-                                            : ((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2) + '%',
+                                            : ((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2) + '%',
                                         }}
                                       >
+
                                         <p
+
                                           className="emi-status-text"
                                           style={{
                                             '--paid-percent':
-                                              paymentData && paymentData.balance_amount === 0
-                                                ? '100%'
-                                                : paymentData && paymentData.no_of_emi != null && batchItem?.emi
-                                                  ? ((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2) + '%'
-                                                  : '0%',
+                                              paymentData && batchItem.fee
+                                                ? `${((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2)}% `
+                                                : '0%',
                                           }}
                                         >
                                           {
-                                            !paymentData || paymentData.no_of_emi == null || !batchItem?.emi
-                                              ? <div className="loading-spinner-pay">
-                                                <div className="spinner-pay"></div>
-                                              </div>
+                                            !paymentData.balance_amount
+                                              ? (
+                                                <div className="loading-spinner-pay">
+                                                  <div className="spinner-pay"></div>
+                                                </div>
+                                              )
                                               : paymentData.balance_amount === 0
                                                 ? 'Paid Off'
-                                                : `${((paymentData.no_of_emi / batchItem.emi) * 100).toFixed(2)}% Paid`
+                                                : `${((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2)}% Paid`
                                           }
                                         </p>
+
 
 
                                       </div>
@@ -1056,22 +1074,32 @@ function Home() {
                           </div>
                         ) : (
                           <ul className="material-list">
-                            {material.map((item) => (
-                              <li key={item.material_id} className="material-item">
-                                <h3>{item.material_title}</h3>
-                                <p>{item.material_description}</p>
-                                {item.material_file && (
-                                  <a
-                                    href={item.material_file.replace('../', '')}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    Download Material
-                                  </a>
-                                )}
-                              </li>
-                            ))}
+                            {material.map((item) => {
+                              const fileUrl = `https://techwingsys.com/billtws/uploads/material/${item.material_file}`;
+
+                              return (
+                                <li key={item.material_id} className="material-item">
+                                  <h3>{item.material_title}</h3>
+                                  <p>{item.material_description}</p>
+
+                                  {item.material_file && (
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                                      }}
+                                    >
+                                      View Material
+                                    </a>
+                                  )}
+                                </li>
+                              );
+                            })}
                           </ul>
+
                         )}
                       </div>
                     )}
@@ -1102,7 +1130,10 @@ function Home() {
                     {loading ? (
                       <div className="loading-spinner"><div className="spinner"></div></div>
                     ) : nodata ? (
-                      <div className="box_notdata"><h1>No data found</h1></div>
+                      <div className="no-announcements-message">
+                        <FaEnvelopeOpen className="empty-icon" />
+                        <p>No mail available at this time</p>
+                      </div>
                     ) : (
                       <div className="announcement-full">
                         <div className="announcement-grid">
