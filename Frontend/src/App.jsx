@@ -21,20 +21,16 @@ function App() {
 
   const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
   const dispatch = useDispatch();
-  var check
-  check = loginInfo ? loginInfo.selectedTrainingId ?
-    loginInfo.selectedTrainingId : loginInfo.trainingIdArray[0] ? loginInfo.trainingIdArray[0] :
-      loginInfo.pro_stud_id ? loginInfo.pro_stud_id : null : null
 
   // Determine `check` based on available ID
-
+  const check = loginInfo?.pro_stud_id || loginInfo?.student_id || '';
   var id = loginInfo ? loginInfo.pro_stud_id : null
 
   useEffect(() => {
-    if (check == null) {
+    if (loginInfo && check === '') {
       dispatch(LogoutData());
     }
-  }, [loginInfo, dispatch,check]);
+  }, [loginInfo, check, dispatch]);
 
 
   return (
