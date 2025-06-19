@@ -26,7 +26,7 @@ function App() {
 
   useEffect(() => {
     if (loginInfo) {
-      if (!loginInfo.trainingIdArray[0]) {
+      if (!loginInfo.trainingIdArray[0] ) {
         dispatch(LogoutData())
           window.location.reload();
       }
