@@ -23,7 +23,8 @@ function App() {
   const dispatch = useDispatch();
   var check
   check = loginInfo ? loginInfo.selectedTrainingId ?
-    loginInfo.selectedTrainingId : loginInfo.trainingIdArray[0] : loginInfo.pro_stud_id ? loginInfo.pro_stud_id : null
+    loginInfo.selectedTrainingId : loginInfo.trainingIdArray[0] ? loginInfo.trainingIdArray[0] :
+      loginInfo.pro_stud_id ? loginInfo.pro_stud_id : null : null
 
   // Determine `check` based on available ID
 
@@ -33,7 +34,7 @@ function App() {
     if (check == null) {
       dispatch(LogoutData());
     }
-  }, [loginInfo, id, dispatch]);
+  }, [loginInfo, dispatch,check]);
 
 
   return (
