@@ -19,20 +19,18 @@ import { LogoutData } from './Redux/UserSlice';
 
 function App() {
 
-  const loginInfo = useSelector((state) => state.userlogin?.LoginInfo[0]);
-  const id = loginInfo?.pro_stud_id;
-  console.log("from app.jsx", id);
-  var dispatch = useDispatch()
+const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
+  const dispatch = useDispatch();
 
-useEffect(() => {
-    if (loginInfo) {
-      if (!loginInfo.pro_stud_id || !loginInfo.student_id) {
-        dispatch(LogoutData())
-      }
+  // Determine `check` based on available ID
+  const check = loginInfo?.pro_stud_id || loginInfo?.student_id || '';
+  var id = loginInfo ? loginInfo.pro_stud_id : null
+
+  useEffect(() => {
+    if (id==null) {
+      dispatch(LogoutData());
     }
-    
-
-  }, [])
+  }, [loginInfo, id, dispatch]);
 
 
   return (
