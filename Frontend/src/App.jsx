@@ -22,15 +22,7 @@ function App() {
   const id = loginInfo?.pro_stud_id;
   console.log("from app.jsx", id);
 
-  console.log("from app.jsx", id);
-  var dispatch = useDispatch()
-  if (id == undefined) {
-    dispatch(LogoutData())
-    setDueDate(null)
-    setTimeout(() => {
-      window.location.reload();
-    }, 0);
-  }
+
 
 
   return (
