@@ -10,7 +10,7 @@ import ChangePass from './pages/ChangePass';
 import Aptitude from './pages/Aptitude';
 import Login from './pages/Login';
 import TaskReply from './components/TaskReply';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import ProjectHome from './pages/ProjectHome';
 import ProjectProtect from './components/ProjectProtect';
 
@@ -21,6 +21,16 @@ function App() {
   const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
   const id = loginInfo?.pro_stud_id;
   console.log("from app.jsx", id);
+
+  console.log("from app.jsx", id);
+  var dispatch = useDispatch()
+  if (id == undefined) {
+    dispatch(LogoutData())
+    setDueDate(null)
+    setTimeout(() => {
+      window.location.reload();
+    }, 0);
+  }
 
 
   return (
