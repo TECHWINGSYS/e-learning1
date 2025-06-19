@@ -24,14 +24,13 @@ function App() {
   console.log("from app.jsx", id);
   var dispatch = useDispatch()
 
-useEffect(() => {
+  useEffect(() => {
     if (loginInfo) {
-      if (!loginInfo.pro_stud_id || !loginInfo.student_id) {
+      if (!loginInfo.trainingIdArray[0]) {
         dispatch(LogoutData())
+          window.location.reload();
       }
     }
-    
-
   }, [])
 
 
