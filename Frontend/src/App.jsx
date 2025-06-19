@@ -28,6 +28,7 @@ useEffect(() => {
     if (loginInfo) {
       if (!loginInfo.pro_stud_id || !loginInfo.student_id) {
         dispatch(LogoutData())
+        window.location.reload();
       }
     }
     
