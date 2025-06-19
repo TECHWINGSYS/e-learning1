@@ -31,7 +31,7 @@ function App() {
           window.location.reload();
       }
     }
-  }, [])
+  }, [loginInfo])
 
 
   return (
