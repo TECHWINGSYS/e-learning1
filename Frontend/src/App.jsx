@@ -19,7 +19,7 @@ import { LogoutData } from './Redux/UserSlice';
 
 function App() {
 
-  const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
+  const loginInfo = useSelector((state) => state.userlogin?.LoginInfo[0]);
   const dispatch = useDispatch();
 
   // Determine `check` based on available ID
