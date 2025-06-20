@@ -26,12 +26,13 @@ function App() {
 
   useEffect(() => {
     if (loginInfo) {
-      if (!loginInfo.trainingIdArray[0] ) {
+      if (!loginInfo.pro_stud_id || !loginInfo.student_id) {
         dispatch(LogoutData())
           window.location.reload();
       }
     }
-  }, [loginInfo])
+
+  }, [])
 
 
   return (
