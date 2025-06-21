@@ -32,15 +32,15 @@ router.post('/login', async (req, res) => {
                 const query = 'SELECT * FROM tbl_project_student WHERE email = ?';
                 var [results3] = await db.query(query, [username])
                 console.log(results3[0].pro_stud_id);
-                const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '100d' });
+                const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '7d' });
                 console.log("login sucess");
-                 const querytofindTrainingIds = 'SELECT * FROM tbl_project WHERE pro_stud_id = ?';
+                const querytofindTrainingIds = 'SELECT * FROM tbl_project WHERE pro_stud_id = ?';
                 var [results4] = await db.query(querytofindTrainingIds, [results3[0].pro_stud_id]);
                 console.log(results4);
-                
+
                 // Extract only the training_id values into an array
-                var trainingIdArray = results4.map(item => item.project_id);
-                return res.status(200).json({ pro_stud_id: results3[0].pro_stud_id, token,trainingIdArray });
+                var trainingIdArrayProject = results4.map(item => item.project_id);
+                return res.status(200).json({ pro_stud_id: results3[0].pro_stud_id, token, trainingIdArrayProject });
 
             } else {
                 const query = 'SELECT * FROM tbl_student WHERE email = ?';
@@ -55,11 +55,10 @@ router.post('/login', async (req, res) => {
                 const trainingIdArray = results2.map(item => item.training_id);
 
                 console.log("All training IDs for student_id:", trainingIdArray);
-                const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '100d' });
+                const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '7d' });
                 console.log("login sucess");
                 return res.status(200).json({ student_id: results1[0].student_id, token, trainingIdArray });
             }
-
 
         }
     } catch (err) {
@@ -268,7 +267,7 @@ router.get('/getdataAnnouncements', verifyToken, async (req, res) => {
 
     console.log(1);
 
-    console.log(batchname);
+    console.log(">>>>>>>>>>>>>>>>>", batchname);
     console.log(2);
     if (!batchname) {
         return res.status(400).json('batchname is required');
@@ -281,7 +280,7 @@ router.get('/getdataAnnouncements', verifyToken, async (req, res) => {
         console.log(results);
 
         console.log(4);
-        if (results.length === 0) {
+        if (results.length === 0 || results == []) {
             console.log(5);
             return res.status(404).json('No announcements found for this batch');
         }
@@ -398,35 +397,37 @@ router.get('/getAptitude', verifyToken, async (req, res) => {
 
 // Add aptitude mark for a student
 router.post('/addaptitudemark', verifyToken, async (req, res) => {
-    const { student_id, aptitude, month } = req.body;
+    const { student_id, aptitude, month, training_id } = req.body;
     console.log("Received body:", req.body);
 
     //  Updated validation (allows 0 as valid value)
     if (
         student_id === undefined ||
         aptitude === undefined ||
-        month === undefined
+        month === undefined ||
+        training_id == undefined
     ) {
         return res.status(400).json('student_id, aptitude, and month are required');
     }
 
     const parsedStudentId = parseInt(student_id);
     const parsedMark = parseFloat(aptitude);
+    const trainingId = parseFloat(training_id)
 
     if (isNaN(parsedStudentId) || isNaN(parsedMark)) {
         return res.status(400).json('Invalid student_id or aptitude');
     }
 
     const query = `
-        INSERT INTO tbl_review (student_id, aptitude, month)
-        VALUES (?, ?, ?)
+        INSERT INTO tbl_review (student_id, aptitude, month,training_id)
+        VALUES (?, ?, ?,?)
         ON DUPLICATE KEY UPDATE 
             aptitude = VALUES(aptitude),
             month = VALUES(month)
     `;
 
     try {
-        const [result] = await db.query(query, [parsedStudentId, parsedMark, month]);
+        const [result] = await db.query(query, [parsedStudentId, parsedMark, month, trainingId]);
         return res.status(200).json({ message: 'Aptitude mark saved successfully' });
     } catch (err) {
         console.error("Database insert error:", err.message);
@@ -601,7 +602,7 @@ router.post('/addreferencedata', verifyToken, async (req, res) => {
 
     try {
         console.log("hi");
-        
+
         const [result] = await db.query(query, [
             parsedTrainingId,
             parsedStudentId,
@@ -611,7 +612,7 @@ router.post('/addreferencedata', verifyToken, async (req, res) => {
             parsedEarnings
         ]);
         console.log('Reference data saved successfully');
-        
+
         return res.status(200).json({ message: 'Reference data saved successfully' });
     } catch (err) {
         console.error("Database insert error:", err.message);
@@ -638,6 +639,37 @@ router.get('/earnings', async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+// update details
+// Update only address using student_id
+router.put('/updatedata', verifyToken, async (req, res) => {
+    const { student_id, address } = req.body;
+
+    if (!student_id || !address) {
+        return res.status(400).json({ message: "student_id and address are required" });
+    }
+
+    const parsedStudentId = parseInt(student_id);
+    if (isNaN(parsedStudentId)) {
+        return res.status(400).json({ message: "Invalid student_id" });
+    }
+
+    const query = 'UPDATE tbl_student SET address = ? WHERE student_id = ?';
+
+    try {
+        const [result] = await db.query(query, [address, parsedStudentId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        return res.status(200).json({ message: "Address updated successfully" });
+    } catch (err) {
+        console.error("Update error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 

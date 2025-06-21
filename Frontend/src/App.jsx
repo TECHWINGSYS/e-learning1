@@ -15,18 +15,12 @@ import ProjectHome from './pages/ProjectHome';
 import ProjectProtect from './components/ProjectProtect';
 import { LogoutData } from './Redux/UserSlice';
 import ErrorBoundary from './components/ErrorBoundary';
- 
+
 
 function App() {
   const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
   const id = loginInfo?.pro_stud_id;
-  const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (loginInfo && (!loginInfo.pro_stud_id && !loginInfo.student_id)) {
-      dispatch(LogoutData());
-    }
-  }, [loginInfo]);
 
   return (
     <ErrorBoundary> 
@@ -51,4 +45,3 @@ function App() {
 }
 
 export default App;
-       

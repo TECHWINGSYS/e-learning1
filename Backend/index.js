@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const studentRouter = require('./Routers/studentRouter'); // ✅ Your router
+const projectRouter = require('./Routers/projectRouter');
 const http = require('http');
 
 dotenv.config();
@@ -23,6 +24,7 @@ const server = http.createServer(app);
 
 // ✅ Setup routes
 app.use('/student', studentRouter); // e.g., /student/add-notification
+app.use('/project', projectRouter);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;

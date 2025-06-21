@@ -1,4 +1,6 @@
 import axios from "axios";
+import {store} from './Redux/store'; // ✅ Move to top
+import { LogoutData } from './Redux/UserSlice'; // ✅ Move to top
 
 // Function to get the token from localStorage dynamically
 const getTokenFromLocalStorage = () => {
@@ -9,8 +11,8 @@ const getTokenFromLocalStorage = () => {
   return loginInfo ? loginInfo.token : '';
 };
 
-// Base URL for both instances
 const SampleUrl = 'https://e-learning-clj3.onrender.com';
+
 
 
 // Basic request (no token needed)
@@ -19,12 +21,11 @@ export const basicRequest = axios.create({
 });
 
 // Token request instance
-export const 
-TokenRequest = axios.create({
+export const TokenRequest = axios.create({
   baseURL: SampleUrl
 });
 
-// ✅ Add request interceptor to TokenRequest
+// ✅ Add request interceptor
 TokenRequest.interceptors.request.use(
   (config) => {
     const token = getTokenFromLocalStorage();
@@ -33,7 +34,18 @@ TokenRequest.interceptors.request.use(
     }
     return config;
   },
+  (error) => Promise.reject(error)
+);
+
+// ✅ Add response interceptor to handle invalid/expired token
+TokenRequest.interceptors.response.use(
+  (response) => response,
   (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("persist:logindata");
+      store.dispatch(LogoutData());
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
