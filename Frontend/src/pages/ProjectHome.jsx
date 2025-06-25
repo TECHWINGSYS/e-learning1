@@ -132,7 +132,7 @@ function ProjectHome() {
     }
   }, [logininfom]);
 
-
+  var [groupDetails, setGroupDetails] = useState()
   // Effect to fetch bill and student data when training_id or active section changes
   useEffect(() => {
 
@@ -156,7 +156,9 @@ function ProjectHome() {
         // get student details
         try {
           let response2 = await TokenRequest.get(`/project/getstudent?pro_stud_id=${logininfom.pro_stud_id}`);
-          setSutdent(response2.data[0].name)
+          console.log("details>>>>>>>>>>>>>>", response2);
+
+          setSutdent(response2.data[0])
 
         } catch (error) {
           console.log(error);
@@ -166,7 +168,9 @@ function ProjectHome() {
         // get project details
         try {
           let response = await TokenRequest.get(`/project/getGroupDetails?project_id=${logininfom.trainingIdArrayProject[0]}`);
-          console.log("Group details", response.data);
+
+          setGroupDetails(response.data[0])
+          console.log("Group details", response.data[0]);
         } catch (error) {
           console.log(error);
 
@@ -189,7 +193,53 @@ function ProjectHome() {
 
       billhome();
     }
-  }, [training_id, activeSection]);
+
+    async function getMailhome() {
+      try {
+        let generalResponse;
+
+        if (groupDetails.pro_type === 'Single Project') {
+          console.log("hi", groupDetails.project_id);
+
+          generalResponse = await TokenRequest.get(`/project/getdataAnnouncementsid?id=${groupDetails.project_id}`);
+          console.log("From mailbox home", generalResponse);
+        } else {
+          generalResponse = await TokenRequest.get(`/project/getdataAnnouncementsid?group=${groupDetails.pro_type}`);
+          console.log("From mailbox home", generalResponse);
+        }
+
+        // Handle empty response
+        if (!generalResponse.data || generalResponse.data.length === 0) {
+          setAnnouncement([]);
+          setNodata(true);
+        } else {
+          setAnnouncement(generalResponse.data);
+        }
+        // Get the latest 5 announcements and reverse them (if you want most recent at top)
+        const generalAnnouncements = generalResponse.data?.slice(-5).reverse() || [];
+
+        const finalAnnouncements = generalAnnouncements.length > 0
+          ? generalAnnouncements
+          : [{ title: "No announcements", description: "There are no announcements available at this time." }];
+
+        setHomeAnnouncement(finalAnnouncements);
+
+
+      } catch (error) {
+        console.warn("Error in announcement processing:", error);
+        setHomeAnnouncement([
+          {
+            title: "Connection issue",
+            description: "Collecting data....."
+          }
+        ]);
+      }
+
+    }
+
+    getMailhome()
+
+  }, [training_id, activeSection, groupDetails]);
 
   // Current date formatted as YYYY-MM-DD
   if (dueDate) {
@@ -233,46 +283,6 @@ function ProjectHome() {
             }, 4000);
           }
 
-          if (group) {
-
-            try {
-              // Fetch both announcements in parallel
-              const [generalResponse, personalResponse] = await Promise.allSettled([
-                TokenRequest.get(`/project/getdataAnnouncements?group=${group}`),
-                TokenRequest.get(`/student/getdataAnnouncementsid?training_id=374`)
-              ]);
-              console.log('>>>>>>>>>>>', generalResponse, personalResponse);
-
-
-              // Process successful responses
-              const generalAnnouncements = generalResponse.status === 'fulfilled'
-                ? generalResponse.value.data.slice(-4).reverse()
-                : [];
-
-              const personalAnnouncements = personalResponse.status === 'fulfilled'
-                ? personalResponse.value.data.slice(-4).reverse()
-                : [];
-
-              // Combine announcements (personal first, then general)
-              const mergedAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
-
-              // Handle empty state
-              const finalAnnouncements = mergedAnnouncements.length > 0
-                ? mergedAnnouncements.slice(0, 6)
-                : [{ title: "No announcements", description: "There are no announcements available at this time." }];
-
-              setHomeAnnouncement(finalAnnouncements);
-
-            } catch (error) {
-              console.warn("Error in announcement processing:", error);
-              setHomeAnnouncement([
-                {
-                  title: "Connection issue",
-                  description: "We couldn't fetch announcements. Please try again later."
-                }
-              ]);
-            }
-          }
           break;
 
 
@@ -288,19 +298,21 @@ function ProjectHome() {
         //       }
         //       break;
 
-            case 'attendance':
-              setActiveSection('attendance');
-              response = await TokenRequest.get(`/project/getdataattendance?training_id=${training_id}&year=${selectedYear}&month=${selectedMonth}`);
-              if (response.data.length === 0) {
-                setAttendance([]);
-                setFilteredAttendance([]);
-                setActiveSection(' ');
-                setNodata(true)
-              } else {
-                setAttendance(response.data);
-                setFilteredAttendance(response.data);
-              }
-              break;
+        case 'attendance':
+          setActiveSection('attendance');
+          response = await TokenRequest.get(`/project/getdataattendance?training_id=${training_id}&year=${selectedYear}&month=${selectedMonth}`);
+          console.log("from attendance>>", response.data);
+
+          if (response.data.length === 0) {
+            setAttendance([]);
+            setFilteredAttendance([]);
+            setActiveSection(' ');
+            setNodata(true)
+          } else {
+            setAttendance(response.data);
+            setFilteredAttendance(response.data);
+          }
+          break;
 
         case 'bill':
           setActiveSection('bill');
@@ -314,53 +326,65 @@ function ProjectHome() {
           }
           break;
 
-        //     case 'material':
-        //       setActiveSection('material');
-        //       response = await TokenRequest.get(`/student/getdatamaterial?batchname=${batchname}`);
-        //       if (response.data.length === 0) {
-        //         setMaterial([]);
-        //         setActiveSection(' ');
-        //         setNodata(true)
-        //       } else {
-        //         setMaterial(response.data);
-        //       }
-        //       break;
+        case 'material':
+          setActiveSection('material');
+          console.log(groupDetails);
+
+          if (groupDetails.pro_type === 'Single Project') {
+
+            const response1 = await TokenRequest.get(`/project/getdatamaterial?id=${groupDetails.project_id}`);
+            console.log(response1.data);
+            if (response1.data.length === 0) {
+              setMaterial([]);
+              setActiveSection(' ');
+              setNodata(true)
+            } else {
+              setMaterial(response1.data);
+            }
+
+          } else {
+
+            const response2 = await TokenRequest.get(`/project/getdatamaterial?group=${groupDetails.pro_type}`);
+            if (response2.data.length === 0) {
+              setMaterial([]);
+              setActiveSection(' ');
+              setNodata(true)
+            } else {
+              setMaterial(response2.data);
+            }
+          }
+
+          break;
 
         case 'announcement':
           setActiveSection('announcement');
           setLoading(true);
           setNodata(false);
+          console.log("Maildata>>>>>>.", groupDetails);
 
           try {
-            // Fetch both endpoints in parallel
-            const [generalResponse, personalResponse] = await Promise.allSettled([
-              TokenRequest.get(`/project/getdataAnnouncements?group=${batchname}`),
-              TokenRequest.get(`/student/getdataAnnouncementsid?training_id=374`)
-            ]);
-            
-            
+            if (groupDetails.pro_type === 'Single Project') {
+              console.log("hi", groupDetails.project_id);
 
-            // Process responses
-            const generalAnnouncements = generalResponse.status === 'fulfilled'
-              ? generalResponse.value.data
-              : [];
+              const response = await TokenRequest.get(`/project/getdataAnnouncementsid?id=${groupDetails.project_id}`);
+              console.log("From mailbox", response);
 
-            const personalAnnouncements = personalResponse.status === 'fulfilled'
-              ? personalResponse.value.data
-              : [];
-
-            // Combine announcements (personal first)
-            const allAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
-
-            if (allAnnouncements.length === 0) {
-              setAnnouncement([]);
-              setPersonalAnn([]);
-              setNodata(true);
+              if (response.length === 0) {
+                setAnnouncement([]);
+                setNodata(true);
+              } else {
+                setAnnouncement(response.data); // Assuming the response data is in response.data
+              }
             } else {
-              setAnnouncement(generalAnnouncements);
-              setPersonalAnn(personalAnnouncements);
+              const response = await TokenRequest.get(`/project/getdataAnnouncementsid?group=${groupDetails.pro_type}`);
+              console.log("From mailbox", response);
+              if (response.length === 0) {
+                setAnnouncement([]);
+                setNodata(true);
+              } else {
+                setAnnouncement(response.data); // Assuming the response data is in response.data
+              }
             }
-
           } catch (error) {
             console.error("Error in announcement processing:", error);
             setNodata(true);
@@ -566,10 +590,8 @@ function ProjectHome() {
               <div className={`topsection_card_userhomepage ${activeMenu === 'batchDetails' ? 'active' : ''}`} onClick={() => fetchData('batchDetails')}>
                 <h3><FaList style={{ marginRight: '4%', height: '20px', width: '20px' }} /> <span className='menus_side_home'>Overview</span></h3>
               </div>
-              <div className={`topsection_card_userhomepage ${activeMenu === 'reviews' ? 'active' : ''}`} onClick={() => fetchData('reviews')}>
-                <h3><MdInsertChart style={{ marginRight: '4%', height: '20px', width: '20px' }} /> <span className='menus_side_home'>Result</span></h3>
-              </div>
-              <Link to={{ pathname: '/ClassVideo' }} style={{ textDecoration: 'none' }} state={{ batchname }} className={`topsection_card_userhomepage ${activeMenu === 'video' ? 'active' : ''}`}>
+
+              <Link to={{ pathname: '/Class-video' }} style={{ textDecoration: 'none' }} state={{ batchname }} className={`topsection_card_userhomepage ${activeMenu === 'video' ? 'active' : ''}`}>
                 <h3><IoIosVideocam style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Video</span></h3>
               </Link>
               <div className={`topsection_card_userhomepage ${activeMenu === 'attendance' ? 'active' : ''}`} onClick={() => fetchData('attendance')}>
@@ -584,9 +606,7 @@ function ProjectHome() {
               <div className={`topsection_card_userhomepage ${activeMenu === 'Project' ? 'active' : ''}`} onClick={() => fetchData('Project')}>
                 <h3><FaLaptopCode style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Project</span></h3>
               </div>
-              <div className={`topsection_card_userhomepage ${activeMenu === 'task' ? 'active' : ''}`} onClick={() => fetchData('task')}>
-                <h3><BiTask style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Tasks</span></h3>
-              </div>
+
               <div className={`topsection_card_userhomepage ${activeMenu === 'material' ? 'active' : ''}`} onClick={() => fetchData('material')}>
                 <h3><FaNoteSticky style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Study Material</span></h3>
               </div>
@@ -1057,7 +1077,7 @@ function ProjectHome() {
 
                               <div key={index} className="batch-card">
                                 <h1 className="batch-title">Batch Details</h1>
-                                <h3>{student}</h3>
+                                <h3>{student.name}</h3>
                                 <div className="batch-header">
 
                                   <h3>{batchItem.pro_category}</h3>
@@ -1067,6 +1087,7 @@ function ProjectHome() {
                                   <p><strong><FaIdCard style={{ marginRight: '8px' }} />Student ID:</strong> {batchItem.project_id}</p>
 
                                   <p><strong><FaSchool style={{ marginRight: '8px' }} />Project Topic:</strong> {batchItem.pro_topic || "Not Available"}</p>
+                                  <p><strong><FaSchool style={{ marginRight: '8px' }} />College:</strong> {student.college || "Not Available"}</p>
                                   <p><strong><FaCalendarMinus style={{ marginRight: '8px' }} />Project Category:</strong> {batchItem.pro_category || "Not Available"}</p>
                                   <p><strong><BiLoaderCircle style={{ marginRight: '8px' }} />Project Lanuage:</strong> {batchItem.pro_language}</p>
                                   <p><strong><FaRegKeyboard style={{ marginRight: '8px' }} />Project Method:</strong> {batchItem.pro_method}</p>
@@ -1108,10 +1129,10 @@ function ProjectHome() {
 
                               return (
                                 <li key={item.material_id} className="material-item">
-                                  <h3>{item.material_title}</h3>
-                                  <p>{item.material_description}</p>
+                                  <h3>{item.material_name}</h3>
+                                  <p>{item.description}</p>
 
-                                  {item.material_file && (
+                                  {item.file_path && (
                                     <a
                                       href={fileUrl}
                                       target="_blank"
@@ -1140,22 +1161,6 @@ function ProjectHome() {
                   <div className="announcement-container">
                     <h1 className="announcement-title"><IoMail className='mail-icon-head' />Mail Box</h1>
 
-                    {/* Gmail-style Tabs */}
-                    <div className="announcement-tabs">
-                      <div
-                        className={`tab-item ${selectedType === 'batch' ? 'active-tab' : ''}`}
-                        onClick={() => setSelectedType('batch')}
-                      >
-                        📩 Batch Mails
-                      </div>
-                      <div
-                        className={`tab-item ${selectedType === 'personal' ? 'active-tab' : ''}`}
-                        onClick={() => setSelectedType('personal')}
-                      >
-                        👤 Personal Mails
-                      </div>
-                    </div>
-
                     {loading ? (
                       <div className="loading-spinner"><div className="spinner"></div></div>
                     ) : nodata ? (
@@ -1166,14 +1171,14 @@ function ProjectHome() {
                     ) : (
                       <div className="announcement-full">
                         <div className="announcement-grid">
-                          {(selectedType === 'batch' ? announcement : personalAnn)
+                          {announcement
                             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                             .length > 0 ? (
-                            (selectedType === 'batch' ? announcement : personalAnn)
+                            announcement
                               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                               .map((item) => (
                                 <div
-                                  key={item.id || item.message_id}
+                                  key={item.id}
                                   className={`announcement-card ${selectedItem && selectedItem.id === item.id ? 'highlighted-card' : ''}`}
                                   onClick={() => handleViewMore(item)}
                                 >
@@ -1206,7 +1211,6 @@ function ProjectHome() {
                     {selectedItem && <ViewAnnou content={selectedItem} onClose={closeViewMore} />}
                   </div>
                 )}
-
 
 
 
@@ -1261,7 +1265,7 @@ function ProjectHome() {
                     <span className="mailbox-icon">📧</span>
                     <h2>Recent Mail Box Updates</h2>
                   </div>
-                  {homeAnnouncement && homeAnnouncement.length > 0 ? (
+                  {homeAnnouncement.length > 0 ? (
                     homeAnnouncement
                       .filter(item => item && item.title) // filter out empty or invalid items
                       .map((item, index) => (
@@ -1318,18 +1322,6 @@ function ProjectHome() {
 
             <div
               className="topsection_card_userhomepage_down"
-              onClick={() => fetchData('reviews')}
-            >
-              <span className="res_down_menus">Result</span>
-              <h3>
-                <MdInsertChart
-                  style={{ marginRight: '4%', height: '25px', width: '25px' }}
-                />
-              </h3>
-            </div>
-
-            <div
-              className="topsection_card_userhomepage_down"
               onClick={() => fetchData('attendance')}
             >
               <span className="res_down_menus">Attendance</span>
@@ -1352,17 +1344,6 @@ function ProjectHome() {
               </h3>
             </div>
 
-            <div
-              className="topsection_card_userhomepage_down"
-              onClick={() => fetchData('task')}
-            >
-              <span className="res_down_menus">Task</span>
-              <h3>
-                <BiTask
-                  style={{ marginRight: '4%', height: '25px', width: '25px' }}
-                />
-              </h3>
-            </div>
 
             <div className="topsection_card_userhomepage_down" onClick={() => fetchData('announcement')}>
               <span className='res_down_menus'>Mail Box</span>

@@ -19,7 +19,7 @@ router.get('/getstudent', verifyToken, async (req, res) => {
     }
 });
 // get group details
-router.get('/getGroupDetails', verifyToken, async (req, res) => {
+router.get('/getGroupDetails', async (req, res) => {
     const { project_id } = req.query;
 
     try {
@@ -50,40 +50,11 @@ router.get('/getBillDetails', verifyToken, async (req, res) => {
     }
 });
 
-// get announcement by project group
-router.get('/getdataAnnouncements', verifyToken, async (req, res) => {
-    const { group } = req.query;
-    console.log(req.query);
-
-    console.log(1);
-
-    console.log(group);
-    console.log(2);
-    if (!group) {
-        return res.status(400).json('group is required');
-    }
-    const query = 'SELECT * FROM tbl_project_announcements WHERE pro_type = ?';
-    console.log(3);
-    try {
-
-        const [results] = await db.query(query, [group]);
-        console.log(results);
-
-        console.log(4);
-        if (results.length === 0) {
-            console.log(5);
-            return res.status(404).json('No announcements found for this batch');
-        }
-        return res.status(200).json(results);
-    } catch (err) {
-        console.error("Query execution error:", err.message);
-        return res.status(500).json({ error: err.message });
-    }
-});
 
 // get attendance router
 router.get('/getdataattendance', verifyToken, async (req, res) => {
     const { training_id, year, month } = req.query;
+
     if (!training_id) {
         return res.status(400).json('training_id is required');
     }
@@ -91,6 +62,8 @@ router.get('/getdataattendance', verifyToken, async (req, res) => {
     if (isNaN(parsedStudentId)) {
         return res.status(400).json('Invalid training_id');
     }
+    console.log(parsedStudentId);
+
     let query = 'SELECT * FROM tbl_project_attendance WHERE project_id = ?';
     let queryParams = [parsedStudentId];
     if (year && month) {
@@ -112,20 +85,58 @@ router.get('/getdataattendance', verifyToken, async (req, res) => {
 });
 
 // get videos
-router.get('/getdatavideos', verifyToken, async (req, res) => {
-    const { group } = req.query;
-    console.log(group);
 
-    if (!group) {
-        return res.status(400).json('group is required');
+router.get('/getdatavideos', verifyToken, async (req, res) => {
+    const { id, group } = req.query;
+    console.log(id, group);
+
+    let query = '';
+    let param = '';
+
+    if (id) {
+        query = 'SELECT * FROM tbl_project_video WHERE ref_id = ?';
+        param = id;
+    } else if (group) {
+        query = 'SELECT * FROM tbl_project_video WHERE ref_id = ?';
+        param = group;
+    } else {
+        return res.status(400).json('Either "id" or "group" is required');
+    }
+    try {
+        const [results] = await db.query(query, [param]);
+        console.log("videos", results);
+
+        if (results.length === 0) {
+            return res.status(404).json('No videos found');
+        }
+        return res.status(200).json(results);
+    } catch (err) {
+        console.error("Query execution error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+})
+// study material
+router.get('/getdatamaterial', verifyToken, async (req, res) => {
+    const { id, group } = req.query;
+    console.log("Material query params:", id, group);
+
+    let query = '';
+    let param = '';
+
+    if (id) {
+        query = 'SELECT * FROM tbl_project_material WHERE ref_id = ?';
+        param = id;
+    } else if (group) {
+        query = 'SELECT * FROM tbl_project_material WHERE ref_id = ?';
+        param = group;
+    } else {
+        return res.status(400).json('Either "id" or "group" is required');
     }
 
-    const query = 'SELECT * FROM tbl_project_videos WHERE pro_type = ?';
-
     try {
-        const [results] = await db.query(query, [group]);
+        const [results] = await db.query(query, [param]);
         if (results.length === 0) {
-            return res.status(404).json('No videos found for this group');
+            return res.status(404).json('No study material found');
         }
         return res.status(200).json(results);
     } catch (err) {
@@ -133,5 +144,41 @@ router.get('/getdatavideos', verifyToken, async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 });
+
+// mail router
+router.get('/getdataAnnouncementsid', verifyToken, async (req, res) => {
+    console.log("hi");
+
+    const { id, group } = req.query;
+    console.log("Announcement query params:", id, group);
+
+    let query = '';
+    let param = '';
+
+    if (id) {
+        query = 'SELECT * FROM tbl_project_mailbox WHERE ref_id = ?';
+        param = id;
+    } else if (group) {
+        query = 'SELECT * FROM tbl_project_mailbox WHERE ref_id = ?';
+        param = group;
+    } else {
+        return res.status(400).json('Either "id" or "group" is required');
+    }
+
+    try {
+        const [results] = await db.query(query, [param]);
+        console.log(results);
+
+        if (results.length === 0) {
+            return res.status(404).json('No announcements found');
+        }
+        return res.status(200).json(results);
+    } catch (err) {
+        console.error("Query execution error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 module.exports = router

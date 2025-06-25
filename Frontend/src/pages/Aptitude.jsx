@@ -3,6 +3,8 @@ import { useSelector } from 'react-redux';
 import { TokenRequest } from '../AxiosCreate';
 import './Aptitude.css';
 import { Link } from "react-router-dom"
+import Swal from 'sweetalert2';
+
 
 function Aptitude() {
     const [loading, setLoading] = useState(false);
@@ -14,15 +16,44 @@ function Aptitude() {
     const [score, setScore] = useState(0);
     const [wrongAnswers, setWrongAnswers] = useState([]);
     const [completedTests, setCompletedTests] = useState({});
+    const [examStatus, setExamStatus] = useState(null); // 'before', 'during', 'after'
+    const [currentExamTime, setCurrentExamTime] = useState(null);
 
     const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]);
     var id = logininfom.selectedTrainingId ? logininfom.selectedTrainingId : logininfom.trainingIdArray[0]
+    console.log(id);
 
     const monthNames = {
         '01': 'January', '02': 'February', '03': 'March', '04': 'April',
         '05': 'May', '06': 'June', '07': 'July', '08': 'August',
         '09': 'September', '10': 'October', '11': 'November', '12': 'December'
     };
+
+    const checkExamTime = (examDate, startTime, endTime) => {
+        const now = new Date();
+        const examDateTime = new Date(examDate);
+
+        // Parse start and end times
+        const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number);
+        const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number);
+
+        // Set start and end times on exam date
+        const examStartTime = new Date(examDateTime);
+        examStartTime.setHours(startHours, startMinutes, startSeconds);
+
+        const examEndTime = new Date(examDateTime);
+        examEndTime.setHours(endHours, endMinutes, endSeconds);
+
+        // Check current time against exam window
+        if (now < examStartTime) {
+            return { status: 'before', startTime: examStartTime };
+        } else if (now >= examStartTime && now <= examEndTime) {
+            return { status: 'during', endTime: examEndTime };
+        } else {
+            return { status: 'after' };
+        }
+    };
+
     async function fetchQuestions() {
         setLoading(true);
 
@@ -107,18 +138,32 @@ function Aptitude() {
         setLoading(false);
     }
 
-
     useEffect(() => {
-        if (logininfom?.student_id) {
-            fetchQuestions();
-        }
-    }, [logininfom]);
+        fetchQuestions()
+    }, [id])
 
     const handleMonthSelect = (month) => {
-        setSelectedMonth(month);
-        setAnswers({});
-        setShowResult(false);
-        setWrongAnswers([]);
+        const selectedExam = questions.find(q => q.month === month);
+        if (selectedExam) {
+            const timeCheck = checkExamTime(
+                selectedExam.exam_date,
+                selectedExam.start_time,
+                selectedExam.end_time
+            );
+
+            setExamStatus(timeCheck.status);
+            setCurrentExamTime({
+                start: timeCheck.startTime,
+                end: timeCheck.endTime
+            });
+
+            if (timeCheck.status === 'during') {
+                setSelectedMonth(month);
+                setAnswers({});
+                setShowResult(false);
+                setWrongAnswers([]);
+            }
+        }
     };
 
     const handleOptionChange = (questionId, selectedOption) => {
@@ -167,7 +212,7 @@ function Aptitude() {
                 student_id: logininfom.student_id,
                 aptitude: total,
                 month: monthName,
-                training_id: logininfom.selectedTrainingId ? logininfom.selectedTrainingId : logininfom.trainingIdArray[0]
+                training_id: id
             });
             console.log('Aptitude mark saved successfully:', response.data);
             fetchQuestions()
@@ -179,6 +224,45 @@ function Aptitude() {
     const filteredQuestions = questions.filter(q => q.month === selectedMonth);
     const totalPossibleScore = filteredQuestions.reduce((sum, q) => sum + q.mark, 0);
     const formattedMonth = selectedMonth ? `${monthNames[selectedMonth.split('-')[1]]} ${selectedMonth.split('-')[0]}` : '';
+
+    const formatTime = (date) => {
+        if (!date) return '';
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatDate = (date) => {
+        if (!date) return '';
+        return date.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
+    useEffect(() => {
+        if (examStatus === 'before' && currentExamTime?.start) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Exam Not Started Yet',
+                html: `
+        <p>The exam will be available on:</p>
+        <p><strong>Date:</strong> ${formatDate(currentExamTime.start)}<br/>
+        <strong>Time:</strong> ${formatTime(currentExamTime.start)}</p>
+      `,
+                confirmButtonText: '← Back to All Tests'
+            }).then(() => {
+                setExamStatus(null);
+            });
+        }
+
+        if (examStatus === 'after') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Exam Time Expired',
+                text: 'The exam time window has ended.',
+                confirmButtonText: '← Back to All Tests'
+            }).then(() => {
+                setExamStatus(null);
+            });
+        }
+    }, [examStatus, currentExamTime]);
+
 
     return (
         <div className="aptitude-container">
@@ -203,6 +287,7 @@ function Aptitude() {
                                     const [year, monthNum] = month.split('-');
                                     const monthName = monthNames[monthNum] || monthNum;
                                     const isCompleted = completedTests[month] !== undefined;
+                                    const examData = questions.find(q => q.month === month);
 
                                     return (
                                         <div
@@ -217,6 +302,11 @@ function Aptitude() {
                                             <div className="month-details">
                                                 <span className="month-name">{monthName}</span>
                                                 <span className="month-year">{year}</span>
+                                                {examData && (
+                                                    <span className="exam-time">
+                                                        {formatTime(new Date(`1970-01-01T${examData.start_time}`))} - {formatTime(new Date(`1970-01-01T${examData.end_time}`))}
+                                                    </span>
+                                                )}
                                                 {isCompleted && (
                                                     <span className="month-score">Score: {completedTests[month]}</span>
                                                 )}
@@ -240,16 +330,20 @@ function Aptitude() {
                 </div>
             )}
 
-            {selectedMonth && (
+            {selectedMonth && examStatus === 'during' && (
                 <div className="test-section">
                     <div className="test-header">
                         <h3>Aptitude Test - {formattedMonth}</h3>
+                        <div className="exam-time-remaining">
+                            Time remaining: {formatTime(currentExamTime.end)}
+                        </div>
                         {!showResult && (
                             <button
                                 className="back-btn"
                                 onClick={() => {
                                     setSelectedMonth('');
                                     setShowResult(false);
+                                    setExamStatus(null);
                                 }}
                             >
                                 ← Back to Months
@@ -365,6 +459,7 @@ function Aptitude() {
                                     onClick={() => {
                                         setSelectedMonth('');
                                         setShowResult(false);
+                                        setExamStatus(null);
                                     }}
                                 >
                                     ← Back to All Tests
@@ -382,7 +477,10 @@ function Aptitude() {
                             <p>No questions available for this month.</p>
                             <button
                                 className="back-btn"
-                                onClick={() => setSelectedMonth('')}
+                                onClick={() => {
+                                    setSelectedMonth('');
+                                    setExamStatus(null);
+                                }}
                             >
                                 ← Back to Months
                             </button>
@@ -393,6 +491,7 @@ function Aptitude() {
                     )}
                 </div>
             )}
+
         </div>
     );
 }

@@ -170,7 +170,63 @@ function Home() {
       }
       billhome();
     }
-  }, [training_id, activeSection]);
+
+    // collecting home mail 
+    async function collectHomeMail() {
+
+      if (batchname) {
+
+        try {
+          // Fetch both announcements in parallel
+          const [generalResponse, personalResponse] = await Promise.allSettled([
+            TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`),
+            TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`)
+          ]);
+          console.log('>>>>>>>>>>>>>>>>>>>', generalResponse, personalResponse);
+
+
+
+          // Process successful responses
+          const generalAnnouncements = generalResponse.status === 'fulfilled'
+            ? generalResponse.value.data.slice(-4).reverse()
+            : [];
+
+          const personalAnnouncements = personalResponse.status === 'fulfilled'
+            ? personalResponse.value.data.slice(-4).reverse()
+            : [];
+
+          // Combine announcements (personal first, then general)
+          const mergedAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
+
+          // Handle empty state
+          const finalAnnouncements = mergedAnnouncements.length > 0
+            ? mergedAnnouncements.slice(0, 6)
+            : [{ title: "No announcements", description: "There are no announcements available at this time." }];
+
+          setHomeAnnouncement(finalAnnouncements);
+
+        } catch (error) {
+          console.warn("Error in announcement processing:", error);
+          setHomeAnnouncement([
+            { title: "No announcements", description: "There are no announcements available at this time." }
+          ]);
+        }
+
+        try {
+          const res = await TokenRequest.get(`/student/getLink?batchname=${batchname}`);
+          console.log("from link api ", res.data);
+
+        } catch (error) {
+          console.log(error);
+
+        }
+
+      }
+    }
+
+    collectHomeMail()
+
+  }, [training_id, activeSection, batchname]);
 
   // Current date formatted as YYYY-MM-DD
   if (dueDate) {
@@ -194,6 +250,8 @@ function Home() {
         case 'batchDetails':
           setActiveSection('batchDetails');
           response = await TokenRequest.get(`/student/getdatatraining?training_id=${training_id}`);
+          console.log(response);
+
           setBatch(response.data);
 
           const batchName = response.data[0]?.batch || 'No Batch Assigned';
@@ -208,50 +266,14 @@ function Home() {
             }, 4000);
           }
 
-          if (batchname) {
-
-            try {
-              // Fetch both announcements in parallel
-              const [generalResponse, personalResponse] = await Promise.allSettled([
-                TokenRequest.get(`/student/getdataAnnouncements?batchname=${batchname}`),
-                TokenRequest.get(`/student/getdataAnnouncementsid?training_id=${training_id}`)
-              ]);
-              console.log('>>>>>>>>>>>>>>>>>>>',generalResponse,personalResponse);
-              
-           
-
-              // Process successful responses
-              const generalAnnouncements = generalResponse.status === 'fulfilled'
-                ? generalResponse.value.data.slice(-4).reverse()
-                : [];
-
-              const personalAnnouncements = personalResponse.status === 'fulfilled'
-                ? personalResponse.value.data.slice(-4).reverse()
-                : [];
-
-              // Combine announcements (personal first, then general)
-              const mergedAnnouncements = [...personalAnnouncements, ...generalAnnouncements];
-
-              // Handle empty state
-              const finalAnnouncements = mergedAnnouncements.length > 0
-                ? mergedAnnouncements.slice(0, 6)
-                : [{ title: "No announcements", description: "There are no announcements available at this time." }];
-
-              setHomeAnnouncement(finalAnnouncements);
-
-            } catch (error) {
-              console.warn("Error in announcement processing:", error);
-              setHomeAnnouncement([
-                { title: "No announcements", description: "There are no announcements available at this time." }
-              ]);
-            }
-          }
           break;
 
 
         case 'reviews':
           setActiveSection('reviews');
           response = await TokenRequest.get(`/student/getdatareview?student_id=${logininfom.student_id}`);
+          console.log("review data>>>>>>>>>.", response);
+
           if (response.data.length === 0) {
             setReviews([]);
             setActiveSection(' ');

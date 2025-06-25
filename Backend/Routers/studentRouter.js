@@ -16,30 +16,39 @@ router.post('/login', async (req, res) => {
     try {
         console.log(2);
         const [results] = await db.query('SELECT * FROM tbl_login WHERE username = ?', [username]);
-        console.log(results);
+        console.log("data>>>>>>>>>>>.", results[0]);
 
-        if (results.length === 0) {
+
+        const user = results[0];
+
+        if (results.length = 0) {
 
             return res.status(401).json({ message: 'Invalid username or password' });
         } else {
+            console.log(3);
 
-            const user = results[0];
             if (password !== user.password) {
                 return res.status(401).json({ message: 'Invalid username or password' });
             }
             console.log("user>", user);
             if (user.type == 'project') {
+                console.log("Hi");
+
                 const query = 'SELECT * FROM tbl_project_student WHERE email = ?';
                 var [results3] = await db.query(query, [username])
                 console.log(results3[0].pro_stud_id);
                 const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '7d' });
                 console.log("login sucess");
                 const querytofindTrainingIds = 'SELECT * FROM tbl_project WHERE pro_stud_id = ?';
+                
+                
                 var [results4] = await db.query(querytofindTrainingIds, [results3[0].pro_stud_id]);
-                console.log(results4);
+                console.log('>>>>>>>>>', results4);
 
                 // Extract only the training_id values into an array
                 var trainingIdArrayProject = results4.map(item => item.project_id);
+                console.log(trainingIdArrayProject);
+                
                 return res.status(200).json({ pro_stud_id: results3[0].pro_stud_id, token, trainingIdArrayProject });
 
             } else {
@@ -434,6 +443,8 @@ router.post('/addaptitudemark', verifyToken, async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 });
+
+
 const ftp = require("basic-ftp");
 const multer = require('multer');
 
@@ -670,6 +681,28 @@ router.put('/updatedata', verifyToken, async (req, res) => {
     }
 });
 
+// data geting student class link
+router.get('/getLink', verifyToken, async (req, res) => {
+    const { batchname } = req.query;
+    console.log("from get link", batchname);
+
+    if (!batchname) {
+        return res.status(400).json('batchname is required');
+    }
+    const query = 'SELECT * FROM tbl_class_link WHERE batch = ?';
+    try {
+        const [results] = await db.query(query, [batchname]);
+        console.log(results);
+
+        if (results.length === 0) {
+            return res.status(404).json('No Class link found for this batch');
+        }
+        return res.status(200).json(results);
+    } catch (err) {
+        console.error("Query execution error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
 
 
 

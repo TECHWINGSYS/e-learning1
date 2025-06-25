@@ -5,12 +5,14 @@ import { loginUser } from '../API/ApiCalling';
 import { useDispatch, useSelector } from 'react-redux';
 import { LoginData } from '../Redux/UserSlice';
 import MultiCourse from './MultiCourse';
+import MultiProject from './MultiProject';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [multiCourseData, setMultiCourseData] = useState(null);
+  var [multiProject, setMultiproject] = useState(null)
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const loginInfo = useSelector((state) => state.userlogin?.LoginInfo);
@@ -30,9 +32,14 @@ function Login() {
     const data = response;
 
     if (data.pro_stud_id) {
-      dispatch(LoginData(data));
-      navigate('/');
-      setLoading(false);
+      if (data.trainingIdArrayProject.length === 0 || data.trainingIdArrayProject.length === 1) {
+        dispatch(LoginData(data));
+        navigate('/');
+        setLoading(false);
+      } else {
+        setMultiproject(data);
+      }
+
     } else {
       if (data.trainingIdArray.length === 0 || data.trainingIdArray.length === 1) {
         dispatch(LoginData(data));
@@ -50,6 +57,10 @@ function Login() {
 
   if (multiCourseData) {
     return <MultiCourse data={multiCourseData} />;
+  }
+
+  if (multiProject) {
+    return <MultiProject data={multiProject} />;
   }
 
 
