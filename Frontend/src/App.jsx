@@ -25,8 +25,6 @@ function App() {
     var id = loginInfo?.pro_stud_id;
   }
 
-
-
   return (
     <ErrorBoundary>
       <Router>
