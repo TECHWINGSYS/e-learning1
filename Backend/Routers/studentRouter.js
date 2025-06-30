@@ -10,13 +10,11 @@ router.post('/login', async (req, res) => {
     console.log(username, password);
 
     if (!username || !password) {
-        console.log(1);
+
         return res.status(400).json({ message: 'Please provide username and password' });
     }
     try {
-        console.log(2);
         const [results] = await db.query('SELECT * FROM tbl_login WHERE username = ?', [username]);
-        console.log("data>>>>>>>>>>>.", results[0]);
 
 
         const user = results[0];
@@ -25,30 +23,33 @@ router.post('/login', async (req, res) => {
 
             return res.status(401).json({ message: 'Invalid username or password' });
         } else {
-            console.log(3);
+     
 
             if (password !== user.password) {
                 return res.status(401).json({ message: 'Invalid username or password' });
             }
-            console.log("user>", user);
+      
+
             if (user.type == 'project') {
-                console.log("Hi");
+          
 
                 const query = 'SELECT * FROM tbl_project_student WHERE email = ?';
                 var [results3] = await db.query(query, [username])
-                console.log(results3[0].pro_stud_id);
+             
+
+             
                 const token = jwt.sign({ id: user.id }, process.env.seckey, { expiresIn: '7d' });
                 console.log("login sucess");
                 const querytofindTrainingIds = 'SELECT * FROM tbl_project WHERE pro_stud_id = ?';
-                
-                
+
+
                 var [results4] = await db.query(querytofindTrainingIds, [results3[0].pro_stud_id]);
                 console.log('>>>>>>>>>', results4);
 
                 // Extract only the training_id values into an array
                 var trainingIdArrayProject = results4.map(item => item.project_id);
                 console.log(trainingIdArrayProject);
-                
+
                 return res.status(200).json({ pro_stud_id: results3[0].pro_stud_id, token, trainingIdArrayProject });
 
             } else {
@@ -330,18 +331,28 @@ router.post('/change-password', verifyToken, async (req, res) => {
         return res.status(400).json({ message: 'All fields are required' });
     }
     try {
-        const [results] = await db.query('SELECT * FROM tbl_login1 WHERE student_id = ?', [student_id]);
-        if (results.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        const user = results[0];
-        console.log(user);
+        const query = 'SELECT * FROM tbl_student WHERE student_id = ?';
+        var [results3] = await db.query(query, [student_id])
+        console.log(results3);
+        var email = results3[0].email
+        if (results3) {
+            const [results] = await db.query('SELECT * FROM tbl_login WHERE username = ?', [email]);
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            const user = results[0];
+            console.log(user);
 
-        if (currentPassword !== user.password) {
-            return res.status(401).json({ message: 'Current password is incorrect' });
+            if (currentPassword !== user.password) {
+                return res.status(401).json({ message: 'Current password is incorrect' });
+            }
+            await db.query('UPDATE tbl_login SET password = ? WHERE username = ?', [newPassword, email]);
+            return res.status(200).json({ message: 'Password updated successfully' });
+
+        } else {
+            res.status(404).json('not found data')
         }
-        await db.query('UPDATE tbl_login1 SET password = ? WHERE student_id = ?', [newPassword, user.student_id]);
-        return res.status(200).json({ message: 'Password updated successfully' });
+
     } catch (err) {
 
         console.error('Error updating password:', err);
@@ -701,6 +712,120 @@ router.get('/getLink', verifyToken, async (req, res) => {
     } catch (err) {
         console.error("Query execution error:", err.message);
         return res.status(500).json({ error: err.message });
+    }
+});
+
+
+// data geting students project review
+router.get('/getProjectReview', verifyToken, async (req, res) => {
+    const { training_id } = req.query;
+    if (!training_id) {
+        return res.status(400).json('training_id is required');
+    }
+    const parsedStudentId = parseInt(training_id);
+    if (isNaN(parsedStudentId)) {
+        return res.status(400).json('Invalid training_id');
+    }
+    const query = 'SELECT * FROM tbl_reviews WHERE training_id = ?';
+    try {
+        const [results] = await db.query(query, [parsedStudentId]);
+        if (results.length === 0) {
+            return res.status(404).json('Student not found');
+        }
+        return res.status(200).json(results);
+    } catch (err) {
+        console.error("Query execution error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+
+
+// Multer configuration for handling multiple files
+const storage1 = multer.memoryStorage();
+const upload1 = multer({
+    storage: storage1,
+    limits: {
+        fileSize: 500 * 1024 * 1024, // 500MB limit for each file
+        files: 2 // Maximum 2 files (project and documentation)
+    }
+});
+
+// FTP Upload Function
+async function uploadToFTP1(fileBuffer, filename) {
+    const client = new ftp.Client();
+    try {
+        await client.access({
+            host: "ftp.techwingsys.com",
+            user: "test2@techwingsys.com",
+            password: "9995400671@Test2",
+            secure: false
+        });
+
+        try {
+            await client.ensureDir("billtws/uploads/training_project");
+        } catch (dirError) {
+            console.log("Directory already exists or couldn't be created");
+        }
+
+        const stream = require('stream');
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(fileBuffer);
+
+        await client.uploadFrom(bufferStream, filename);
+        console.log("File uploaded to FTP!");
+        return true;
+    } catch (err) {
+        console.error("FTP upload failed:", err);
+        throw err;
+    } finally {
+        client.close();
+    }
+}
+
+// Project Submission Route
+router.post('/submit-project', verifyToken, upload1.fields([
+    { name: 'projectFile', maxCount: 1 },
+]), async (req, res) => {
+    const { training_id, student_id } = req.body;
+
+ 
+    try {
+        // Upload files to FTP
+        let projectFileName = null;
+
+        const timestamp = Date.now();
+
+        if (req.files.projectFile) {
+            projectFileName = `req.files.projectFile[0].originalname`;
+            await uploadToFTP1(req.files.projectFile[0].buffer, projectFileName);
+        }
+
+        // Save submission record to DB
+        const submissionQuery = `
+    INSERT INTO tbl_training_project_upload
+    (student_id, project_file, training_id, upload_date) 
+    VALUES (?, ?, ?, NOW())
+`;
+        const [submissionResult] = await db.query(submissionQuery, [
+            student_id,
+            projectFileName,
+            training_id
+        ]);
+
+        res.status(201).json({
+            message: 'Project submitted successfully',
+            submissionId: submissionResult.insertId
+        });
+
+    } catch (err) {
+        console.error('Project submission error:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ message: 'Each file must be less than 500MB' });
+        }
+        res.status(500).json({ message: 'Failed to submit project', error: err.message });
     }
 });
 

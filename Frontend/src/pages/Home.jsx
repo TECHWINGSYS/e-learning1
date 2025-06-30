@@ -43,6 +43,8 @@ import { FaBell } from "react-icons/fa";
 import { LuBellDot } from "react-icons/lu";
 import { BsCoin } from "react-icons/bs";
 import Earn from './Earn';
+import { SiGooglemeet } from "react-icons/si";
+import ProjectUpload from '../components/PojectUpload';
 
 
 /**
@@ -81,7 +83,17 @@ function Home() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedType, setSelectedType] = useState('batch');   // Toggle between 'batch' or 'personal'
   const [coinsEarned, setCoinsEarned] = useState();
+  var [projectReview, setProjectReview] = useState([])
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]); // Gets login info from Redux
+  var [classLinkDetails, setClassLinkDetails] = useState()
+  const [hoveredProjectId, setHoveredProjectId] = useState(null);
+
+  const [reviewMap, setReviewMap] = useState({});
+
+
+
+
 
 
   const handleViewMore = (item) => {
@@ -214,12 +226,14 @@ function Home() {
 
         try {
           const res = await TokenRequest.get(`/student/getLink?batchname=${batchname}`);
-          console.log("from link api ", res.data);
+          console.log("from link api ", res.data[0]);
+          setClassLinkDetails(res.data[0])
 
         } catch (error) {
           console.log(error);
 
         }
+
 
       }
     }
@@ -367,12 +381,26 @@ function Home() {
           setActiveSection('Project');
           response = await TokenRequest.get(`/student/getProjects?training_id=${training_id}`);
 
+
           if (response.data.length === 0) {
             setActiveSection(' ');
             setNodata(true)
           } else {
             setProject(response.data)
           }
+
+          try {
+            var responseReview = await TokenRequest.get(`/student/getProjectReview?training_id=${training_id}`);
+            if (responseReview.data.length === 0) {
+              setProjectReview([])
+            } else {
+              setProjectReview(responseReview.data)
+            }
+          } catch (error) {
+            console.log("Not project Review", error);
+          }
+
+
           break;
 
         case 'personalannouncement':
@@ -413,6 +441,31 @@ function Home() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    async function fetchProjectReview() {
+      try {
+        const res = await TokenRequest.get(`/student/getProjectReview?training_id=${training_id}`);
+        const reviewArray = res.data;
+        console.log("project reviews", res.data);
+
+
+        const groupedReviews = {};
+        reviewArray.forEach((rev) => {
+          if (!groupedReviews[rev.project_id]) {
+            groupedReviews[rev.project_id] = [];
+          }
+          groupedReviews[rev.project_id].push(rev);
+        });
+
+        setReviewMap(groupedReviews);
+      } catch (error) {
+        console.log("No project review", error);
+      }
+    }
+
+    fetchProjectReview();
+  }, [training_id]);
 
 
   /**
@@ -784,7 +837,7 @@ function Home() {
                               .sort((a, b) => new Date(b.date_assigned) - new Date(a.date_assigned))
                               .map((task, index) => (
                                 <tr key={index} className={`task-status-${task.task_status.toLowerCase()}`}>
-                                  <td>{task.task_description}</td>
+                                  <td dangerouslySetInnerHTML={{ __html: cleanHtml(task.task_description) }}></td>
                                   <td>
                                     {new Date(task.date_assigned).toLocaleDateString('en-IN', {
                                       day: '2-digit',
@@ -862,17 +915,68 @@ function Home() {
                               <th>Project Started</th>
                               <th>Deadline</th>
                               <th>Status</th>
+                               <th>Upload</th> 
                             </tr>
                           </thead>
                           <tbody>
                             {project.map((proj, index) => (
-                              <tr key={index} className={`project-status-${proj.project_status.toLowerCase()}`}>
-                                <td>{proj.project_description}</td>
+                              <tr
+                                key={index}
+                                className={`project-status-${proj.project_status.toLowerCase()}`}
+                                onMouseEnter={() => setHoveredProjectId(proj.project_id)}
+                                onMouseLeave={() => setHoveredProjectId(null)}
+                                style={{ position: 'relative' }}
+                              >
+                                <td dangerouslySetInnerHTML={{ __html: cleanHtml(proj.project_description) }}></td>
                                 <td>{new Date(proj.date_created).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
                                 <td>{new Date(proj.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
                                 <td>{proj.project_status}</td>
+
+                           
+                                <td
+                                  onClick={() => setShowUploadModal(true)}
+                                  className="upload-button"
+                                  style={{ color: 'green', backgroundColor: 'transparent' }}
+                                >
+                                  Upload</td>
+
+                                {showUploadModal && (
+                                  <ProjectUpload onClose={() => setShowUploadModal(false)} />
+                                )}
+                               
+                                {/* Hover Review Box */}
+                                {hoveredProjectId === proj.project_id && reviewMap[proj.project_id] && (
+                                  <div className="hover-review-box">
+                                    <div className="review-table-title">📋 Project Review Timeline</div>
+                                    <table className="review-table-project">
+                                      <thead>
+                                        <tr>
+                                          <th>Review Phase</th>
+                                          <th>Scheduled Date</th>
+                                          <th>Status</th>
+
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {reviewMap[proj.project_id].map((review, i) => (
+                                          <tr key={i}>
+                                            <td>{review.review_name?.split('â')[0]?.trim() || `Review ${i + 1}`}</td>
+                                            <td>{new Date(review.review_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} </td>
+                                            <td>
+                                              <span className={`status-badge ${review.review_status.toLowerCase()}`}>
+                                                {review.review_status}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
                               </tr>
                             ))}
+
+
                           </tbody>
                         </table>
                       </div>
@@ -1040,11 +1144,13 @@ function Home() {
 
                                   </div>
                                 ) : (
-                                  <p>No payment details available</p>
+                                  ''
                                 )}
                               </div>
 
                               {/** ****************************************************** */}
+
+
 
 
                               <div key={index} className="batch-card">
@@ -1056,14 +1162,27 @@ function Home() {
                                   <p className="status">{batchItem.status || "Status Not Available"}</p>
                                 </div>
                                 <div className="batch-body">
-                                  <p><strong><FaIdCard style={{ marginRight: '8px' }} />Student ID:</strong> {training_id}</p>
                                   <p><strong> <FaClock style={{ marginRight: '8px' }} />Start Time:</strong> {batchItem.start_time || "Not Available"}</p>
                                   <p><strong><FaClock style={{ marginRight: '8px' }} />End Time:</strong> {batchItem.end_time || "Not Available"}</p>
-                                  <p><strong><FaSchool style={{ marginRight: '8px' }} />Course Name:</strong> {batchItem.course_name || "Not Available"}</p>
-                                  <p><strong><FaCalendarMinus style={{ marginRight: '8px' }} />Batch Code:</strong> {batchItem.batch || "Not Available"}</p>
-                                  <p><strong><BiLoaderCircle style={{ marginRight: '8px' }} />Course Duration:</strong> {batchItem.duration} months</p>
                                   <p><strong><FaRegKeyboard style={{ marginRight: '8px' }} />Training Method:</strong> {batchItem.training_method}</p>
                                   <p><strong><IoIosCard style={{ marginRight: '8px' }} />Course Fee:</strong> {batchItem.fee}/-</p>
+
+                                  {
+                                    classLinkDetails ?
+                                      classLinkDetails.status === 'Active' && classLinkDetails.link && (
+                                        <a
+                                          href={classLinkDetails.link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="meet-button"
+                                        >
+                                          <SiGooglemeet style={{ marginRight: '8px' }} />
+                                          Join Live Class
+                                        </a>
+                                      ) : ''
+                                  }
+
+
                                 </div>
                               </div>
 
@@ -1095,6 +1214,8 @@ function Home() {
                             <p className="no-material">No materials yet now</p>
                           </div>
                         ) : (
+
+
                           <ul className="material-list">
                             {material.map((item) => {
                               const fileUrl = `https://techwingsys.com/billtws/uploads/material/${item.material_file}`;
@@ -1105,22 +1226,25 @@ function Home() {
                                   <p>{item.material_description}</p>
 
                                   {item.material_file && (
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        window.open(fileUrl, '_blank', 'noopener,noreferrer');
-                                      }}
-                                    >
-                                      View Material
-                                    </a>
+                                    <div className="material-footer">
+                                      <a
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                                        }}
+                                      >
+                                        View Material
+                                      </a>
+                                    </div>
                                   )}
                                 </li>
                               );
                             })}
                           </ul>
+
 
                         )}
                       </div>
