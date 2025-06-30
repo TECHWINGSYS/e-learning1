@@ -11,7 +11,7 @@ const getTokenFromLocalStorage = () => {
   return loginInfo ? loginInfo.token : '';
 };
 
-const SampleUrl = 'http://localhost:5000';
+const SampleUrl = 'https://e-learning-clj3.onrender.com';
 
 // http://localhost:5000
 

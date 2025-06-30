@@ -21,11 +21,14 @@ import ProChangePas from './pages/ProChangePas';
 
 function App() {
   const loginInfo = useSelector((state) => state.userlogin?.LoginInfo?.[0]);
-  const id = loginInfo?.pro_stud_id;
+  if (loginInfo) {
+    var id = loginInfo?.pro_stud_id;
+  }
+
 
 
   return (
-    <ErrorBoundary> 
+    <ErrorBoundary>
       <Router>
         <Routes>
           <Route path='/login' element={<Login />} />
@@ -39,7 +42,7 @@ function App() {
           <Route element={<ProjectProtect />}>
             <Route path='/' element={id ? <ProjectHome /> : <Home />} />
             <Route path='/Class-video' element={id ? <ProjectClassVideo /> : <Home />} />
-            <Route path='/Project-change-pass' element={id ? <ProChangePas/> : <Home />} />
+            <Route path='/Project-change-pass' element={id ? <ProChangePas /> : <Home />} />
           </Route>
         </Routes>
       </Router>
