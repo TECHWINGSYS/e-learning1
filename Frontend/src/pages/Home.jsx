@@ -565,7 +565,7 @@ function Home() {
           <section className='navbar_main'>
             <div className='inner_div_nav'>
               <div className='leftnav'>
-                <img src="https://techwingsys.com/tws-logo3.png" className='logo_nav' alt="" />
+                <img src="https://techwingsys.com/tws-logo5.png" className='logo_nav' alt="" />
 
               </div>
 
