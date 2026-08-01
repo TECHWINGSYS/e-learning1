@@ -643,7 +643,7 @@ function Home() {
               <button style={{ fontSize: '15px' }} className={`topsection_card_userhomepage_buttons ${activeMenu === 'helpSupport' ? 'active' : ''}`} onClick={() => fetchData('helpSupport')}>
                 <div><RiCustomerService2Fill style={{ marginRight: '4%', height: '20px', width: '20px' }} /><span className='menus_side_home'>Help & Support</span></div>
               </button>
-              <h3 className='sidebar_bottom_text'>Kochi's Premier IT Training Institute</h3>
+              <h3 className='sidebar_bottom_text'>Kochi's Trusted IT Training Institute</h3>
             </div>
           </div>
 
