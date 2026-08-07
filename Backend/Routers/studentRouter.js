@@ -799,7 +799,7 @@ router.post('/submit-project', verifyToken, upload1.fields([
         const timestamp = Date.now();
 
         if (req.files.projectFile) {
-            projectFileName = `req.files.projectFile[0].originalname`;
+            projectFileName = req.files.projectFile[0].originalname;
             await uploadToFTP1(req.files.projectFile[0].buffer, projectFileName);
         }
 
