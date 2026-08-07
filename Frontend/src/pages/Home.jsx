@@ -1086,73 +1086,67 @@ function Home() {
                           batch.map((batchItem, index) => (
                             <div className='inner_box' >
                               <div className='payment-details'>
-                                {paymentData && batchItem.fee ? (() => {
+                                {paymentData ? (
+                                  <div key={paymentData.bill_id} className='payment-bill'>
+                                    <div className='bill-info'>
+                                      <p className='balance-amount'>
+                                        {
+                                          paymentData.balance_amount === '0'
+                                            ? 'Payment Completed'
+                                            : (
+                                              <div>
+                                                Balance Amount <RiMoneyRupeeCircleFill className='money-icon-home' />{paymentData.balance_amount}
+                                              </div>
+                                            )
+                                        }
+                                      </p>
+                                      <div className='due-date'>{paymentData.due_date ? <div> Due Date: {new Date(paymentData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} </div> : ' '}
+                                      </div>
+                                    </div>
+                                    <div className="emi-progress">
+                                      <div
+                                        className="emi-line"
+                                        style={{
+                                          '--paid-percent': paymentData.balance_amount === 0
+                                            ? '100%'
+                                            : ((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2) + '%',
+                                        }}
+                                      >
 
-  const fee = Number(batchItem.fee) || 0;
-  const balance = Number(paymentData.balance_amount) || 0;
+                                        <p
 
-  const paidAmount = Math.max(0, fee - balance);
+                                          className="emi-status-text"
+                                          style={{
+                                            '--paid-percent':
+                                              paymentData && batchItem.fee
+                                                ? `${((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2)}% `
+                                                : '0%',
+                                          }}
+                                        >
+                                          {
+                                            !paymentData.balance_amount
+                                              ? (
+                                                <div className="loading-spinner-pay">
+                                                  <div className="spinner-pay"></div>
+                                                </div>
+                                              )
+                                              : paymentData.balance_amount === 0
+                                                ? 'Paid Off'
+                                                : `${((batchItem.fee - paymentData.balance_amount) / batchItem.fee * 100).toFixed(2)}% Paid`
+                                          }
+                                        </p>
 
-  const paidPercent = fee > 0
-    ? Math.min(100, Math.max(0, (paidAmount / fee) * 100))
-    : 0;
 
-  const isFullyPaid = balance <= 0;
 
-  return (
-    <div className="payment-card">
+                                      </div>
 
-      {/* Header */}
-      <div className="payment-header">
+                                    </div>
 
-        <div className="payment-title">
-          {isFullyPaid
-            ? "Payment Completed"
-            : "Payment Progress"
-          }
-        </div>
-
-        <div className="payment-percent">
-          {paidPercent.toFixed(2)}% Paid
-        </div>
-
-      </div>
-
-      {/* Progress Bar */}
-      <div className="payment-progress">
-
-        <div
-          className="payment-progress-fill"
-          style={{
-            width: `${paidPercent}%`
-          }}
-        />
-
-      </div>
-
-      {/* Optional Due Date */}
-      {paymentData.due_date && !isFullyPaid && (
-        <div className="payment-due-date">
-          Due Date:{" "}
-          {new Date(paymentData.due_date).toLocaleDateString(
-            "en-GB",
-            {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric"
-            }
-          )}
-        </div>
-      )}
-
-    </div>
-  );
-
-})() : (
-  <div className="payment-loading">
-    <div className="spinner-pay"></div>
-  </div>
-)}
+                                  </div>
+                                ) : (
+                                  ''
+                                )}
+                              </div>
 
                               {/** ****************************************************** */}
 
