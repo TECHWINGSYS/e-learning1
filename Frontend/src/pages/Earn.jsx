@@ -23,13 +23,13 @@ function Earn() {
     const [showCoins, setShowCoins] = useState(false);
 
     const logininfom = useSelector((state) => state.userlogin?.LoginInfo[0]); // Gets login info from Redux
-    var training_id = logininfom.selectedTrainingId ? logininfom.selectedTrainingId : logininfom.trainingIdArray[0]
-    var student_id = logininfom.student_id
+    var training_id = logininfom?.selectedTrainingId ? logininfom.selectedTrainingId : logininfom?.trainingIdArray?.[0]
+    var student_id = logininfom?.student_id
 
     useEffect(() => {
         const fetchEarnings = async () => {
             try {
-                const res = await TokenRequest.get(`/student/earnings?student_id=${logininfom.student_id}`);
+                const res = await TokenRequest.get(`/student/earnings?student_id=${logininfom?.student_id}`);
                 console.log("earinings>>>>>.", res.data.total_earnings);
                 setCoinsEarned(res.data.total_earnings)
 
@@ -53,14 +53,14 @@ function Earn() {
     const getNextAmount = () => {
         
         // First 5 referrals with increasing amounts
-        if (coinsEarned < 500) return 500; // 1st referral
-        if (coinsEarned === 500) return 750; // 2nd referral
-        if (coinsEarned === 1250) return 1000; // 3rd referral
-        if (coinsEarned === 2250) return 1250; // 4th referral
-        if (coinsEarned === 3500) return 1500; // 5th referral
+        if (Number(coinsEarned || 0) < 500) return 500; // 1st referral
+        if (Number(coinsEarned || 0) === 500) return 750; // 2nd referral
+        if (Number(coinsEarned || 0) === 1250) return 1000; // 3rd referral
+        if (Number(coinsEarned || 0) === 2250) return 1250; // 4th referral
+        if (Number(coinsEarned || 0) === 3500) return 1500; // 5th referral
 
         // After 5 referrals, fixed amount per referral
-        if (coinsEarned >= 5000) return 500;
+        if (Number(coinsEarned || 0) >= 5000) return 500;
 
         return 0;
     };
@@ -136,16 +136,17 @@ function Earn() {
      
 
     // Check if user has completed initial offers (5 referrals)
-    const hasCompletedInitialOffers = coinsEarned >= 5000;
+    const hasCompletedInitialOffers = Number(coinsEarned || 0) >= 5000;
 
     // Calculate the current referral level (1-5)
     const getCurrentReferralLevel = () => {
+        const earned = Number(coinsEarned || 0);
      
-        if (coinsEarned < 500) return 0;
-        if (coinsEarned === 500) return 1;
-        if (coinsEarned === 1250) return 2;
-        if (coinsEarned === 2250) return 3;
-        if (coinsEarned === 3500) return 4;
+        if (Number(coinsEarned || 0) < 500) return 0;
+        if (Number(coinsEarned || 0) === 500) return 1;
+        if (Number(coinsEarned || 0) === 1250) return 2;
+        if (Number(coinsEarned || 0) === 2250) return 3;
+        if (Number(coinsEarned || 0) === 3500) return 4;
         return 6; // Beyond 5 referrals
     };
 
@@ -163,8 +164,8 @@ function Earn() {
                         </div>
                     </div>
 
-                    <h2 className="section-title">Start Earning Now!</h2>
-                    <p className="section-subtitle">Refer friends and collect rewards instantly</p>
+                    <h2 className="section-title">Refer &amp; Earn</h2>
+                    <p className="section-subtitle">Invite your friends to TECHWINGSYS and earn rewards when they join and pay.</p>
 
                     <div className="potential-earnings">
                         <div className="potential-badge">
@@ -411,7 +412,7 @@ function Earn() {
                             </div>
 
                             <div className="total-potential">
-                                <div className="total-label">Total Potential:</div>
+                                <div className="total-label">Total Potential Earnings</div>
                                 <div className="total-amount">₹5,000</div>
                             </div>
                         </div>
@@ -424,7 +425,7 @@ function Earn() {
                         <BsCoin className="earning-coin" />
                         <span>Your Earnings</span>
                     </div>
-                    <div className="earnings-amount">₹{coinsEarned}</div>
+                    <div className="earnings-amount">₹{Number(coinsEarned || 0).toLocaleString('en-IN')}</div>
                 </div>
             </div>
         </div>
